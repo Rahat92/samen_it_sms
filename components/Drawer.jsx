@@ -35,7 +35,7 @@ export default function Drawer() {
           <div style={{ minWidth: 0 }}>
             <h2 id="drawer-title">{row.subject}</h2>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8, flexWrap: "wrap" }}>
-              <Pill status={row.status} />
+              <Pill status={row.status === 'HardFail'?'Hard Fail':row.status === 'SoftFail'?'Soft Fail':row.status} />
               <span className="mono hint">{EVENT[row.status]}</span>
             </div>
           </div>
@@ -45,10 +45,10 @@ export default function Drawer() {
         </div>
 
         <div className="drawer-body">
-          {cat ? (
+          {row.status !== 'Sent' ? (
             <div className={`callout ${row.status}`}>
               <Icon name={row.status === "Delayed" ? "clock" : "fail"} />
-              <div><strong>{cat.name}</strong><p>{cat.advice}</p></div>
+              <div><strong>{row.output}</strong><p>{row.details}</p></div>
             </div>
           ) : (
             <div className="callout Sent">
@@ -70,7 +70,7 @@ export default function Drawer() {
             <p className="hint" style={{ marginBottom: 8, fontWeight: 600 }}>
               SMTP response{row.real ? "" : " (representative)"}
             </p>
-            <pre className="code">{smtp}</pre>
+            <pre className="code">{row.output}</pre>
           </div>
         </div>
 

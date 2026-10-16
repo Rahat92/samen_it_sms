@@ -9,7 +9,8 @@ export default function VolumeChart({ list, range }) {
   const bad = Array(n).fill(0);
 
   list.forEach((r) => {
-    const b = Math.min(n - 1, Math.floor((r.t - start) / size));
+    console.log(new Date(r.occurredAt).getTime() )
+    const b = Math.min(n - 1, Math.floor((new Date(r.occurredAt).getTime() - start) / size));
     if (b < 0) return;
     if (r.status === "Sent") ok[b]++;
     else bad[b]++;

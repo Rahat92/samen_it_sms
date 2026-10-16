@@ -1,8 +1,8 @@
 import Link from "next/link";
 import Icon from "./Icon";
 
-export default function StatTiles({ t, stats }) {
-  console.log(  "StatTiles", { t, stats });
+export default function StatTiles({ t, stats  }) {
+  console.log(  "StatTiles", { t, stats  });
   return (
     <div className="stats">
       <Link className="stat" href="/transactions">
@@ -15,7 +15,7 @@ export default function StatTiles({ t, stats }) {
       </Link>
       <Link className="stat" href="/failures">
         <span className="badge red"><Icon name="fail" /></span>
-        <small>Failed / Delayed</small><b>{stats.other}</b>
+        <small>Failed / Delayed</small><b>{stats.softFail+stats.hardFail}</b>
       </Link>
       <div className="stat">
         <span className="badge amber"><Icon name="pct" /></span>

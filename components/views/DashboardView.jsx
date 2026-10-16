@@ -9,14 +9,14 @@ import TxTable from "../TxTable";
 import BlockTable from "../BlockTable";
 import { totals } from "@/lib/stats";
 
-export default function DashboardView({stats, daily, filters, result}) {
+export default function DashboardView({stats, daily, filters, result, sent}) {
   console.log("DashboardView", {stats, daily, filters, result});
   const { scoped, range, blocked } = useDashboard();
   const t = totals(scoped);
 
   return (
     <>
-      <StatTiles t={t} stats={stats} />
+      <StatTiles t={t} stats={stats} sent={sent} />
       <div className="grid-2">
         <section className="card">
           <header><div><h2>Email volume</h2><p className="hint">Sent versus failed or delayed</p></div></header>

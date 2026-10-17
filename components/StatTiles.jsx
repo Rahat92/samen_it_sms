@@ -2,7 +2,6 @@ import Link from "next/link";
 import Icon from "./Icon";
 
 export default function StatTiles({ t, stats  }) {
-  console.log(  "StatTiles", { t, stats  });
   return (
     <div className="stats">
       <Link className="stat" href="/transactions">
@@ -19,7 +18,7 @@ export default function StatTiles({ t, stats  }) {
       </Link>
       <div className="stat">
         <span className="badge amber"><Icon name="pct" /></span>
-        <small>Success Rate</small><b>{stats.rate.toFixed(2)}%</b>
+        <small>Success Rate</small><b>{stats?.rate?.toFixed(2)}%</b>
       </div>
     </div>
   );

@@ -10,7 +10,7 @@ export const metadata = { title: { absolute: "Dashboard · Mail Dashboard" } };
 
 export default async function Page() {
   const [stats, daily, filters, result ] = await Promise.all([
-    getStats(),
+    getStats(''),
     getDaily(),
     getFilterOptions(),
     getEvents({
@@ -22,5 +22,5 @@ export default async function Page() {
     }),
   ]);
   // console.log("DashboardPage", { stats, daily, filters, result });
-  return <DashboardView stats={stats}  daily={daily} filters={filters} result={result} />;
+  return <DashboardView daily={daily} filters={filters} result={result} />;
 }

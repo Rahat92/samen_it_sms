@@ -45,10 +45,45 @@ export async function POST(request) {
 
 export async function GET(request) {
   try {
-    const events = await prisma.mailEvent.findMany();
-    return Response.json({ events });
+    const { searchParams } = new URL(request.url);
+
+    // Default pagination values
+    const page = Math.max(1, parseInt(searchParams.get("page")) || 1);
+    const limit = Math.min(
+      100,
+      Math.max(1, parseInt(searchParams.get("limit")) || 20)
+    );
+
+    const skip = (page - 1) * limit;
+
+    // Fetch events and total count
+    const [events, total] = await Promise.all([
+      prisma.mailEvent.findMany({
+        skip,
+        take: limit,
+        orderBy: {
+          occurredAt: "desc", // Latest events first
+        },
+      }),
+      prisma.mailEvent.count(),
+    ]);
+
+    return Response.json({
+      events,
+      pagination: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+        hasNextPage: page * limit < total,
+        hasPreviousPage: page > 1,
+      },
+    });
   } catch (error) {
     console.error(error);
-    return Response.json({ error: "Failed to fetch events" }, { status: 500 });
+    return Response.json(
+      { error: "Failed to fetch events" },
+      { status: 500 }
+    );
   }
 }

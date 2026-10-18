@@ -20,11 +20,11 @@ export default function DashboardView({ daily, filters, result, sent}) {
 
   useEffect(() => {
     const fetchStats = async() => {
-      const {data} = await axios.get(`/api/stats?tenant=${tenant === 'all'?'':tenant}&timeFrom=`)
+      const {data} = await axios.get(`/api/stats?tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
       setStats(await data)
     } 
     fetchStats()
-  }, [tenant]) 
+  }, [tenant, range]) 
   console.log(stats)
   return (
     <>

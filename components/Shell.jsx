@@ -54,9 +54,11 @@ export default function Shell({ children }) {
             <label htmlFor="tenant" className="sr-only">Tenant</label>
             <select id="tenant" className="sel" value={tenant} onChange={(e) => setTenant(e.target.value)}>
               <option value="all">All Tenants</option>
-              {Object.entries(TENANTS).map(([k, t]) => (
-                <option key={k} value={k}>{t.name}</option>
-              ))}
+              {Object.entries(TENANTS).map(([k, t]) => {
+                console.log(t);
+                return <option key={k} value={t.domain}>{t.name}</option>
+              }
+              )}
             </select>
             <div className="avatar" aria-hidden="true">AD</div>
           </div>

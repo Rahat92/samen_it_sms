@@ -9,7 +9,6 @@ const Ctx = createContext(null);
 export function DashboardProvider({ children }) {
   const [range, setRange] = useState(24);
   const [rows, setRows] = useState([]);
-  console.log("DashboardProvider", {rows, range});
   const [tenant, setTenant] = useState("all");
   const [blocked, setBlocked] = useState(INITIAL_BLOCKED);
   const [history, setHistory] = useState(INITIAL_HISTORY);
@@ -63,7 +62,6 @@ export function DashboardProvider({ children }) {
     selectedId, openEvent: setSelectedId, closeEvent: () => setSelectedId(null),
     toastMsg, toast, copy,
   };
-
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 

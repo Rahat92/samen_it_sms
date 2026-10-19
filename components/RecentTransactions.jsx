@@ -1,10 +1,15 @@
+'use client'
+import { useEffect } from "react";
 import { Card, CardHeader, CardLink } from "./Card";
+const { scoped, range, blocked, tenant } = useDashboard();
+console.log(tenant)
 import {
   getStats,
   getDaily,
   getFilterOptions,
   getEvents,
 } from "@/lib/queries";
+import axios from "axios";
 const pill = {
   Sent: "bg-emerald-100 text-emerald-800",
   Delayed: "bg-amber-100 text-amber-800",
@@ -16,20 +21,25 @@ const dot = {
   Failed: "bg-bad",
 };
 
-export default async function RecentTransactions({ rows }) {
-  const [stats, daily, filters, result] = await Promise.all([
-    getStats(),
-    getDaily(),
-    getFilterOptions(),
-    getEvents({
-      q: "",
-      status: "",
-      event: "",
-      page: 1,
-      pageSize: 10,
-    }),
-  ]);
-  console.log(stats, daily, filters, result.rows);
+export default function RecentTransactions({ rows }) {
+  // const [stats, daily, filters, result] = await Promise.all([
+  //   getStats(),
+  //   getDaily(),
+  //   getFilterOptions(),
+  //   getEvents({
+  //     q: "",
+  //     status: "",
+  //     event: "",
+  //     page: 1,
+  //     pageSize: 10,
+  //   }),
+  // ]);
+  useEffect(() => {
+    const fetchRows = async () => {
+      const { data } = await axios.get('/api/events?limit=20&status=Sent&')
+    }
+  }, [])
+
   return (
     <Card className="overflow-x-auto">
       <CardHeader

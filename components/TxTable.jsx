@@ -4,10 +4,21 @@ import Pill from "./Pill";
 import { useDashboard } from "./DashboardProvider";
 import { CATS } from "@/lib/sample-data";
 import { stamp } from "@/lib/format";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
 export default function TxTable({ list, limit, compact = false }) {
-  const { openEvent, setRows } = useDashboard();
+  const { openEvent, setRows,tenant, range  } = useDashboard();
+    const [filteredRows, setFilteredRows] = useState([{}])
+  
+  useEffect(() => {
+    const fetchRows = async() => {
+      const {data} = await axios.get(`/api/events?limit=20&status=Sent&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
+      setFilteredRows(await data.rows)
+    } 
+    fetchRows()
+  }, [tenant, range]) 
+
   useEffect(() => {
     setRows(list);
   }, [list, setRows]);
@@ -18,12 +29,12 @@ export default function TxTable({ list, limit, compact = false }) {
       <table style={compact ? { minWidth: 520 } : undefined}>
         <thead>
           <tr>
-            <th>ID</th><th>Time</th><th>To</th><th>Subject</th><th>Status</th>
+            <th>ID</th><th>Time</th><th>To</th><th>From</th><th>Subject</th><th>Status</th>
             {!compact && <th>Reason</th>}
           </tr>
         </thead>
         <tbody>
-          {list.slice(0, limit).map((r) => (
+          {filteredRows.map((r) => (
             <tr
               key={r.id}
               className="click"
@@ -34,8 +45,9 @@ export default function TxTable({ list, limit, compact = false }) {
               }}
             >
               <td className="mono dim">{r.id}</td>
-              <td className="dim">{stamp(r.payload.payload.time)}</td>
+              <td className="dim">{stamp(r.payload?.payload?.time)}</td>
               <td>{r.toAddress}</td>
+              <td>{r.fromAddress}</td>
               <td className="wrap">{r.subject}</td>
               <td><Pill status={r.status} /></td>
               {!compact && <td className="dim">{r.cat ? CATS[r.cat].name : ""}</td>}

@@ -13,8 +13,8 @@ import axios from "axios";
 
 export default function DashboardView({ daily, filters, result, sent}) {
   const { scoped, range, blocked, tenant } = useDashboard();
-  console.log(tenant)
   const [stats, setStats] = useState({})
+  const [rows, setRows] = useState([{}])
   const t = totals(scoped);
   const res = fetch(`/api/stats?tenant=&timeFrom=`);
 
@@ -23,9 +23,14 @@ export default function DashboardView({ daily, filters, result, sent}) {
       const {data} = await axios.get(`/api/stats?tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
       setStats(await data)
     } 
+    const fetchRows = async() => {
+      const {data} = await axios.get(`/api/events?limit=20&status=Sent&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
+      setRows(await data.rows)
+    } 
+    fetchRows()
     fetchStats()
   }, [tenant, range]) 
-  console.log(stats)
+  console.log(rows)
   return (
     <>
       <StatTiles t={t} stats={stats} sent={sent} />

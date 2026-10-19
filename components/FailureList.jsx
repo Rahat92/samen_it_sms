@@ -13,7 +13,7 @@ export default function FailureList({ stats, limit = 9 }) {
 
   return (
     <div className="flist">
-      {[{
+      {/* {[{
         name:'Hard Failures',
         key:'hardFail',
         icon:'fail',
@@ -34,7 +34,7 @@ export default function FailureList({ stats, limit = 9 }) {
             <span className={`fcount ${k.key}`}>{stats[k.key]}</span>
           </Link>
         );
-      })}
+      })} */}
     </div>
   );
 }

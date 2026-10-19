@@ -12,9 +12,8 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 export default function DashboardView({ daily, filters, result, sent}) {
-  const { scoped, range, blocked, tenant } = useDashboard();
+  const { scoped, range, blocked, tenant, rows, setRows } = useDashboard();
   const [stats, setStats] = useState({})
-  const [rows, setRows] = useState([{}])
   const t = totals(scoped);
   const res = fetch(`/api/stats?tenant=&timeFrom=`);
 

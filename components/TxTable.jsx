@@ -13,7 +13,7 @@ export default function TxTable({ list, limit, compact = false }) {
   
   useEffect(() => {
     const fetchRows = async() => {
-      const {data} = await axios.get(`/api/events?limit=20&status=Sent&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
+      const {data} = await axios.get(`/api/events?limit=5&status=Sent&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
       setFilteredRows(await data.rows)
     } 
     fetchRows()
@@ -29,7 +29,7 @@ export default function TxTable({ list, limit, compact = false }) {
       <table style={compact ? { minWidth: 520 } : undefined}>
         <thead>
           <tr>
-            <th>ID</th><th>Time</th><th>To</th><th>From</th><th>Subject</th><th>Status</th>
+            <th>Time</th><th>To</th><th>From</th><th>Subject</th><th>Status</th>
             {!compact && <th>Reason</th>}
           </tr>
         </thead>
@@ -44,7 +44,7 @@ export default function TxTable({ list, limit, compact = false }) {
                 if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEvent(r.id); }
               }}
             >
-              <td className="mono dim">{r.id}</td>
+              {/* <td className="mono dim">{r.id}</td> */}
               <td className="dim">{stamp(r.payload?.payload?.time)}</td>
               <td>{r.toAddress}</td>
               <td>{r.fromAddress}</td>

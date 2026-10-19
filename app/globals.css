@@ -139,6 +139,7 @@ a.stat:hover { border-color: var(--accent); }
 .fbar i { display: block; height: 100%; border-radius: 3px; }
 .fbar i.softFail { background: var(--warn); }
 .fbar i.hardFail { background: var(--bad); }
+.fbar i.other { background: var(--bad); }
 .fcount { font: 500 15px var(--font-mono); color: var(--bad); }
 .fcount.Delayed { color: var(--warn); }
 

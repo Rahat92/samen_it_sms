@@ -24,7 +24,7 @@ export default function DashboardView({ daily, filters, result, sent}) {
       setStats(await data)
     } 
     const fetchRows = async() => {
-      const {data} = await axios.get(`/api/events?limit=5&status=Sent&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
+      const {data} = await axios.get(`/api/events?limit=5000&status=Sent&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
       setRows(await data.rows)
     } 
     fetchRows()
@@ -37,7 +37,7 @@ export default function DashboardView({ daily, filters, result, sent}) {
       <div className="grid-2">
         <section className="card">
           <header><div><h2>Email volume</h2><p className="hint">Sent versus failed or delayed</p></div></header>
-          <div className="pad"><VolumeChart list={result.rows} range={range} /></div>
+          <div className="pad"><VolumeChart events={rows} hours={range} /></div>
         </section>
         <section className="card">
           <header>

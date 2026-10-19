@@ -13,7 +13,7 @@ export default function TxTable({ list, limit, compact = false }) {
   
   useEffect(() => {
     const fetchRows = async() => {
-      const {data} = await axios.get(`/api/events?limit=5&status=Sent&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
+      const {data} = await axios.get(`/api/events?limit=50&status=Sent&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
       setFilteredRows(await data.rows)
     } 
     fetchRows()

@@ -12,7 +12,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 export default function DashboardView({ daily, filters, result, sent}) {
-  const { scoped, range, blocked, tenant, rows, setRows } = useDashboard();
+  const { scoped, range, blocked, tenant, rows, setRows, graphRows, setGraphRows } = useDashboard();
   const [stats, setStats] = useState({})
   console.log(range)
   const t = totals(scoped);
@@ -23,21 +23,25 @@ export default function DashboardView({ daily, filters, result, sent}) {
       const {data} = await axios.get(`/api/stats?tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
       setStats(await data)
     } 
-    const fetchRows = async() => {
-      const {data} = await axios.get(`/api/events?limit=5000&status=Sent&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
-      setRows(await data.rows)
+    // const fetchRows = async() => {
+    //   const {data} = await axios.get(`/api/events?limit=5&status=&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
+    //   setRows(await data.rows)
+    // } 
+    const fetchGraphRows = async() => {
+      const {data} = await axios.get(`/api/graph-events?limit=&status=&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
+      setGraphRows(await data.rows)
     } 
-    fetchRows()
+    fetchGraphRows()
+    // fetchRows()
     fetchStats()
   }, [tenant, range]) 
-  console.log(rows)
   return (
     <>
       <StatTiles t={t} stats={stats} sent={sent} />
       <div className="grid-2">
         <section className="card">
           <header><div><h2>Email volume</h2><p className="hint">Sent versus failed or delayed</p></div></header>
-          <div className="pad"><VolumeChart events={rows} hours={range} /></div>
+          <div className="pad"><VolumeChart events={graphRows} hours={range} /></div>
         </section>
         <section className="card">
           <header>

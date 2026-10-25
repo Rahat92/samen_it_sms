@@ -13,27 +13,14 @@ const timeFmt = new Intl.DateTimeFormat("en-GB", {
 });
 const hm = (t) => timeFmt.format(new Date(t));
 
-/**
- * Email volume: sent vs failed or delayed, per time slot (stacked).
- *
- * Props:
- *  - events:   raw API events ({ event, status, occurredAt, ... })
- *  - hours:    window length in hours, ending now (default 24)
- *  - slotMin:  slot size in minutes (default 60)
- *  - labelEvery: show a time label under every Nth bar (default 4)
- */
 export default function SlotChart({ events = [], hours = 24, slotMin = 60, labelEvery = 4 }) {
-  const [now, setNow] = useState(null); // null on the server => no hydration mismatch
+  const [now, setNow] = useState(null);
   useEffect(() => {
     setNow(Date.now());
     const id = setInterval(() => setNow(Date.now()), 60_000);
     return () => clearInterval(id);
   }, []);
-  console.log(
-  "events:", events.length,
-  "statuses:", [...new Set(events.map((e) => e.status))],
-  "missing occurredAt:", events.filter((e) => !e.occurredAt).length
-);
+  
   const data = useMemo(() => {
     if (now === null) return null;
 
@@ -44,7 +31,7 @@ export default function SlotChart({ events = [], hours = 24, slotMin = 60, label
 
     const sent = Array(n).fill(0);
     const bad = Array(n).fill(0);
-
+    console.log(events.filter(item => item.status!=='Sent'))
     for (const e of events) {
       const t = new Date(e.occurredAt).getTime();
       if (Number.isNaN(t) || t < start || t > end) continue;
@@ -53,7 +40,7 @@ export default function SlotChart({ events = [], hours = 24, slotMin = 60, label
       if (e.status === "Sent") sent[i]++;
       else bad[i]++;
     }
-
+    console.log(bad)
     const peak = Math.max(0, ...sent.map((v, i) => v + bad[i]));
     const max = Math.max(4, Math.ceil(peak / 4) * 4);
     return { n, size, start, sent, bad, max };

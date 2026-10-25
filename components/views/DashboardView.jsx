@@ -57,7 +57,7 @@ export default function DashboardView({ daily, filters, result, sent}) {
             <div><h2>Recent transactions</h2><p className="hint">Click a row for the full detail</p></div>
             <Link className="link" href="/transactions">View all</Link>
           </header>
-          <TxTable list={result.rows} limit={6} compact />
+          <TxTable list={result.rows} limit={6} status={'All'} compact />
         </section>
         <section className="card">
           <header>

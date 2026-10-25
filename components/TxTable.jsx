@@ -7,22 +7,19 @@ import { stamp } from "@/lib/format";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function TxTable({ list, limit, compact = false }) {
+export default function TxTable({ limit, status, compact = false }) {
   const { openEvent, setRows,tenant, range  } = useDashboard();
     const [filteredRows, setFilteredRows] = useState([{}])
   
   useEffect(() => {
     const fetchRows = async() => {
-      const {data} = await axios.get(`/api/events?limit=5&status=Sent&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
+      const {data} = await axios.get(`/api/events?limit=${limit}&status=${(status===''|| status=='All')?'':status }&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
       setFilteredRows(await data.rows)
     } 
     fetchRows()
-  }, [tenant, range]) 
+  }, [tenant, range, status]) 
 
-  useEffect(() => {
-    setRows(list);
-  }, [list, setRows]);
-  if (!list.length) return <div className="empty">No messages match these filters.</div>;
+  if (filteredRows.length === 0) return <div className="empty">No messages match these filters.</div>;
 
   return (
     <div className="tablewrap">

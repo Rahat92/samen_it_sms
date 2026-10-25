@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Icon from "../Icon";
 import TxTable from "../TxTable";
 import { useDashboard } from "../DashboardProvider";
 import { CATS, CAT_ORDER } from "@/lib/sample-data";
+import axios from "axios";
 
-const STATUSES = ["All", "Sent", "Delayed", "Failed"];
+const STATUSES = ["All", "Sent", "SoftFail", "HardFail"];
 const PAGE = 20;
 
 export default function TransactionsView() {
@@ -20,6 +21,7 @@ export default function TransactionsView() {
   const cat = CAT_ORDER.includes(params.get("cat")) ? params.get("cat") : "all";
   const [q, setQ] = useState("");
   const [limit, setLimit] = useState(PAGE);
+  const [list, setList] = useState([])
 
   function setParam(key, value, empty) {
     const next = new URLSearchParams(params.toString());
@@ -30,16 +32,17 @@ export default function TransactionsView() {
     setLimit(PAGE);
   }
 
-  const list = useMemo(() => {
-    const needle = q.trim().toLowerCase();
-    return scoped.filter((r) => {
-      if (status !== "All" && r.status !== status) return false;
-      if (cat !== "all" && r.cat !== cat) return false;
-      if (needle && `${r.to} ${r.subject} ${r.id}`.toLowerCase().indexOf(needle) < 0) return false;
-      return true;
-    });
-  }, [scoped, status, cat, q]);
-
+  // const list = useMemo(async () => {
+  //   const { data } = await axios.get(`/api/events?limit=5&status=Sent&tenant=&timeFrom=`)
+  //   return data.rows
+  // }, [scoped, status, cat, q]);
+  // useEffect(() => {
+  //   const fetchEventList = async () => {
+  //     const { data } = await axios.get(`/api/events?limit=20&status=Sent&tenant=&timeFrom=`)
+  //     setList(await data.rows)
+  //   }
+  //   fetchEventList()
+  // }, [])
   return (
     <>
       <div className="toolbar">
@@ -67,7 +70,7 @@ export default function TransactionsView() {
       </div>
 
       <section className="card">
-        <TxTable list={list} limit={limit} />
+        <TxTable limit={limit} status={status} />
         <div className="tfoot">
           <span>Showing {Math.min(limit, list.length)} of {list.length}</span>
           {list.length > limit && (

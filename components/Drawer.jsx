@@ -5,13 +5,13 @@ import Icon from "./Icon";
 import Pill from "./Pill";
 import { useDashboard } from "./DashboardProvider";
 import { rows, CATS, EVENT, TENANTS } from "@/lib/sample-data";
-import { HOUR, hms } from "@/lib/format";
+import { HOUR, formatDateTime, hms } from "@/lib/format";
 
 export default function Drawer() {
   const { selectedId, closeEvent, isBlocked, addBlock, toast, copy, rows  } = useDashboard();
   const closeRef = useRef(null);
   const row = rows.find((r) => r.id === selectedId);
-
+  console.log(rows)
   useEffect(() => {
     if (!row) return;
     closeRef.current?.focus();
@@ -62,8 +62,7 @@ export default function Drawer() {
             <dt>From</dt><dd>{tenant.from}</dd>
             <dt>Tenant</dt><dd>{tenant.name}</dd>
             <dt>Event ID</dt><dd className="mono">{row.id}</dd>
-            <dt>Time (Dhaka)</dt><dd className="mono">{hms(row.t)}</dd>
-            <dt>Time (UTC)</dt><dd className="mono">{hms(row.t - 6 * HOUR)}</dd>
+            <dt>Time (Dhaka)</dt><dd className="mono">{formatDateTime(row.occurredAt)}</dd>
           </dl>
 
           <div>

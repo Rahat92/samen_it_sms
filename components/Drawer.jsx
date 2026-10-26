@@ -23,7 +23,8 @@ export default function Drawer() {
   if (!row) return null;
 
   const cat = row.cat ? CATS[row.cat] : null;
-  const tenant = TENANTS[row.fromAddress.split("@")[1]] || { name: row.fromAddress.split("@")[1], from: row.fromAddress };
+  const tenant = Object.values(TENANTS).find(item => row.fromAddress.includes(item.domain)).name
+;
   const blocked = isBlocked(row.toAddress);
   const smtp = cat ? cat.smtp : row.details;
 
@@ -43,7 +44,6 @@ export default function Drawer() {
             <Icon name="close" />
           </button>
         </div>
-
         <div className="drawer-body">
           {row.status !== 'Sent' ? (
             <div className={`callout ${row.status}`}>
@@ -59,8 +59,8 @@ export default function Drawer() {
 
           <dl className="facts">
             <dt>To</dt><dd>{row.toAddress}</dd>
-            <dt>From</dt><dd>{tenant.from}</dd>
-            <dt>Tenant</dt><dd>{tenant.name}</dd>
+            <dt>From</dt><dd>{row.fromAddress}</dd>
+            <dt>Tenant</dt><dd>{tenant}</dd>
             <dt>Event ID</dt><dd className="mono">{row.id}</dd>
             <dt>Time (Dhaka)</dt><dd className="mono">{formatDateTime(row.occurredAt)}</dd>
           </dl>

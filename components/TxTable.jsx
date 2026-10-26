@@ -7,18 +7,25 @@ import { stamp } from "@/lib/format";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function TxTable({ limit, status, compact = false }) {
-  const { openEvent, setRows,tenant, range  } = useDashboard();
-    const [filteredRows, setFilteredRows] = useState([{}])
-  
+export default function TxTable({ limit, status, compact = false, q }) {
+  const { openEvent, setRows, tenant, range } = useDashboard();
+  const [filteredRows, setFilteredRows] = useState([{}])
+  const [query, setQuery] = useState('')
   useEffect(() => {
-    const fetchRows = async() => {
-      const {data} = await axios.get(`/api/events?limit=${limit}&status=${(status===''|| status=='All')?'':status }&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
+    const fetchRows = async () => {
+      const { data } = await axios.get(`/api/events?limit=${limit}&status=${(status === '' || status == 'All') ? '' : status}&tenant=${tenant === 'all' ? '' : tenant}&timeFrom=${range}&q=${query}`)
       setFilteredRows(await data.rows)
-    } 
+    }
     fetchRows()
-  }, [tenant, range, status]) 
-
+  }, [tenant, range, status, query])
+  useEffect(() => {
+    let timer = setTimeout(() => {
+      setQuery(q)
+    }, 400)
+    return () => {
+      clearTimeout(timer)
+    }
+  }, [q])
   if (filteredRows.length === 0) return <div className="empty">No messages match these filters.</div>;
 
   return (
@@ -26,12 +33,12 @@ export default function TxTable({ limit, status, compact = false }) {
       <table style={compact ? { minWidth: 520 } : undefined}>
         <thead>
           <tr>
-            <th>Time</th><th>To</th><th>From</th><th>Subject</th><th>Status</th>
+            <th>Sl</th><th>Time</th><th>To</th><th>From</th><th>Subject</th><th>Status</th>
             {!compact && <th>Reason</th>}
           </tr>
         </thead>
         <tbody>
-          {filteredRows.map((r) => (
+          {filteredRows.map((r, index) => (
             <tr
               key={r.id}
               className="click"
@@ -41,7 +48,7 @@ export default function TxTable({ limit, status, compact = false }) {
                 if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEvent(r.id); }
               }}
             >
-              {/* <td className="mono dim">{r.id}</td> */}
+              <td className="mono dim">{index+1}</td>
               <td className="dim">{stamp(r.payload?.payload?.time)}</td>
               <td>{r.toAddress}</td>
               <td>{r.fromAddress}</td>

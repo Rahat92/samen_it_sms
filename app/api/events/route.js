@@ -5,10 +5,11 @@ export async function GET(request) {
         const { searchParams } = new URL(request.url);
         const tenant = searchParams.get("tenant");
         const status = searchParams.get("status");
+        const q = searchParams.get("q");
         const timeFrom = searchParams.get("timeFrom") || 24 ;
         const page = searchParams.get("page") || 1 ;
         const pageSize = searchParams.get("limit") || 10 ;
-        const events = await getEvents({tenant, range:timeFrom, page, pageSize, status});
+        const events = await getEvents({tenant, range:timeFrom, page, pageSize, status, q});
         return NextResponse.json(events);
     } catch (error) {
         console.error(error);

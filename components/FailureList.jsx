@@ -9,9 +9,9 @@ export default function FailureList({ stats, limit = 9 }) {
   // const max = Math.max(1, ...keys.map((k) => m[k]));
 
   const CATEGORIES = [
-    { name: 'Hard Failures', key: 'hardFail', icon: 'fail', color: 'bad' },
-    { name: 'Soft Failures', key: 'softFail', icon: 'clock', color: 'warn' },
-    { name: 'Other', key: 'other', icon: 'clock', color: 'warn' },
+    { name: 'Hard Failures', status:'HardFail', key: 'hardFail', icon: 'fail', color: 'bad' },
+    { name: 'Soft Failures', status:'SoftFail', key: 'softFail', icon: 'clock', color: 'warn' },
+    { name: 'Other', key: 'other', status:'Other', icon: 'clock', color: 'warn' },
   ];
 
   const maxCount = Math.max(...CATEGORIES.map((k) => stats[k.key] ?? 0), 1);
@@ -22,7 +22,7 @@ export default function FailureList({ stats, limit = 9 }) {
       const pct = (count / maxCount) * 100;
 
       return (
-        <Link key={k.key} className="frow" href={`/transactions?cat=${k.key}`}>
+        <Link key={k.key} className="frow" href={`/transactions?status=${k.status}`}>
           <span className={`fico ${k.color}`}>
             <Icon name={k.icon} />
           </span>

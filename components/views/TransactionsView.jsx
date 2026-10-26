@@ -1,25 +1,23 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Icon from "../Icon";
 import TxTable from "../TxTable";
 import { useDashboard } from "../DashboardProvider";
 import { CATS, CAT_ORDER } from "@/lib/sample-data";
-import axios from "axios";
 
 const STATUSES = ["All", "Sent", "SoftFail", "HardFail"];
 const PAGE = 20;
 
 export default function TransactionsView() {
-  const { scoped } = useDashboard();
+  const { q, setQ } = useDashboard();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
 
   const status = STATUSES.includes(params.get("status")) ? params.get("status") : "All";
   const cat = CAT_ORDER.includes(params.get("cat")) ? params.get("cat") : "all";
-  const [q, setQ] = useState("");
   const [limit, setLimit] = useState(PAGE);
   const [list, setList] = useState([])
 
@@ -31,18 +29,6 @@ export default function TransactionsView() {
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     setLimit(PAGE);
   }
-
-  // const list = useMemo(async () => {
-  //   const { data } = await axios.get(`/api/events?limit=5&status=Sent&tenant=&timeFrom=`)
-  //   return data.rows
-  // }, [scoped, status, cat, q]);
-  // useEffect(() => {
-  //   const fetchEventList = async () => {
-  //     const { data } = await axios.get(`/api/events?limit=20&status=Sent&tenant=&timeFrom=`)
-  //     setList(await data.rows)
-  //   }
-  //   fetchEventList()
-  // }, [])
   return (
     <>
       <div className="toolbar">
@@ -70,7 +56,7 @@ export default function TransactionsView() {
       </div>
 
       <section className="card">
-        <TxTable limit={limit} status={status} />
+        <TxTable limit={limit} status={status} q = {q} />
         <div className="tfoot">
           <span>Showing {Math.min(limit, list.length)} of {list.length}</span>
           {list.length > limit && (

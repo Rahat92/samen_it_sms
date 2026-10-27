@@ -50,6 +50,8 @@ export default function Shell({ children }) {
               <option value={1}>Last hour</option>
               <option value={6}>Last 6 hours</option>
               <option value={24}>Last 24 hours</option>
+              <option value={48}>Last 48 hours</option>
+              <option value={72}>Last 72 hours</option>
             </select>
             <label htmlFor="tenant" className="sr-only">Tenant</label>
             <select id="tenant" className="sel" value={tenant} onChange={(e) => setTenant(e.target.value)}>

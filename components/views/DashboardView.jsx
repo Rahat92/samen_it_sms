@@ -11,29 +11,30 @@ import { totals } from "@/lib/stats";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function DashboardView({ daily, filters, result, sent }) {
-  const { scoped, range, blocked, tenant, rows, setRows, graphRows, setGraphRows, stats, setStats } = useDashboard();
+export default function DashboardView({ daily, filters, result, sent}) {
+  const { scoped, range, blocked, tenant, rows, setRows, graphRows, setGraphRows } = useDashboard();
+  const [stats, setStats] = useState({})
   console.log(range)
   const t = totals(scoped);
   const res = fetch(`/api/stats?tenant=&timeFrom=`);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      const { data } = await axios.get(`/api/stats?tenant=${tenant === 'all' ? '' : tenant}&timeFrom=${range}`)
+    const fetchStats = async() => {
+      const {data} = await axios.get(`/api/stats?tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
       setStats(await data)
-    }
+    } 
     // const fetchRows = async() => {
     //   const {data} = await axios.get(`/api/events?limit=5&status=&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
     //   setRows(await data.rows)
     // } 
-    const fetchGraphRows = async () => {
-      const { data } = await axios.get(`/api/graph-events?limit=&status=&tenant=${tenant === 'all' ? '' : tenant}&timeFrom=${range}`)
+    const fetchGraphRows = async() => {
+      const {data} = await axios.get(`/api/graph-events?limit=&status=&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
       setGraphRows(await data.rows)
-    }
+    } 
     fetchGraphRows()
     // fetchRows()
     fetchStats()
-  }, [tenant, range])
+  }, [tenant, range]) 
   return (
     <>
       <StatTiles t={t} stats={stats} sent={sent} />

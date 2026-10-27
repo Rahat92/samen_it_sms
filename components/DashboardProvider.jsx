@@ -8,6 +8,7 @@ const Ctx = createContext(null);
 
 export function DashboardProvider({ children }) {
   const [range, setRange] = useState(24);
+  const [total, setTotal] = useState(null);
   const [q, setQ] = useState('');
   const [rows, setRows] = useState([]);
   const [graphRows, setGraphRows] = useState([]);
@@ -58,7 +59,7 @@ export function DashboardProvider({ children }) {
   );
 
   const value = {
-    rows, setRows, graphRows, setGraphRows, q, setQ,
+    rows, setRows, graphRows, setGraphRows, q, setQ, total, setTotal,
     range, setRange, tenant, setTenant, scoped, 
     blocked, history, isBlocked, addBlock, removeBlock,
     selectedId, openEvent: setSelectedId, closeEvent: () => setSelectedId(null),

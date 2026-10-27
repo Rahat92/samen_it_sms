@@ -8,17 +8,18 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 export default function TxTable({ limit, status, compact = false, q }) {
-  const { openEvent, setRows, tenant, range, selectedId } = useDashboard();
+  const { openEvent, setRows, tenant, range, selectedId, setTotal } = useDashboard();
   const [filteredRows, setFilteredRows] = useState([])
   const [query, setQuery] = useState('')
   useEffect(() => {
     const fetchRows = async () => {
       const { data } = await axios.get(`/api/events?limit=${limit}&status=${(status === '' || status == 'All') ? '' : status}&tenant=${tenant === 'all' ? '' : tenant}&timeFrom=${range}&q=${query}`)
       setFilteredRows(await data.rows)
+      setTotal(await data.total)
       setRows(await data.rows)
     }
     fetchRows()
-  }, [tenant, range, status, query])
+  }, [tenant, range, status, query, limit])
   useEffect(() => {
     let timer = setTimeout(() => {
       setQuery(q)

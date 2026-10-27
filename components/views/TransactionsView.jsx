@@ -8,10 +8,11 @@ import { useDashboard } from "../DashboardProvider";
 import { CATS, CAT_ORDER } from "@/lib/sample-data";
 
 const STATUSES = ["All", "Sent", "SoftFail", "HardFail"];
-const PAGE = 20;
+const PAGE = 12;
 
 export default function TransactionsView() {
-  const { q, setQ } = useDashboard();
+  const { q, setQ, total } = useDashboard();
+  console.log(total)
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -58,9 +59,9 @@ export default function TransactionsView() {
       <section className="card">
         <TxTable limit={limit} status={status} q = {q} />
         <div className="tfoot">
-          <span>Showing {Math.min(limit, list.length)} of {list.length}</span>
-          {list.length > limit && (
-            <button className="btn sm" onClick={() => setLimit((l) => l + PAGE)}>Show 20 more</button>
+          <span>Showing {Math.min(limit, total)} of {total}</span>
+          {total > limit && (
+            <button className="btn sm" onClick={() => setLimit((l) => l + PAGE)}>Show {PAGE} more</button>
           )}
         </div>
       </section>

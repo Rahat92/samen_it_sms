@@ -158,7 +158,7 @@ td.wrap { white-space: normal; min-width: 160px; }
 .card .tablewrap th:first-child, .card .tablewrap td:first-child { padding-left: 18px; }
 
 /* toolbar */
-.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; position:sticky; top:0; background: var(--bg); padding: 1rem 0; }
 .search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; flex: 1 1 240px; min-width: 0; }
 .search input { border: 0; background: none; padding: 8px 0; flex: 1; min-width: 0; outline: none; }
 .search:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }

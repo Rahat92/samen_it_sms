@@ -48,7 +48,7 @@ export default function Drawer() {
           {row.status !== 'Sent' ? (
             <div className={`callout ${row.status}`}>
               <Icon name={row.status === "Delayed" ? "clock" : "fail"} />
-              <div><strong>{row.output}</strong><p>{row.details}</p></div>
+              <div><strong>{row.output.includes('inbox is out of storage space')?'Mailbox Over Quota (Gmail)':row.output}</strong><p>{row.details}</p></div>
             </div>
           ) : (
             <div className="callout Sent">

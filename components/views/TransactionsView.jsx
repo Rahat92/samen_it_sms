@@ -7,12 +7,11 @@ import TxTable from "../TxTable";
 import { useDashboard } from "../DashboardProvider";
 import { CATS, CAT_ORDER } from "@/lib/sample-data";
 
-const STATUSES = ["All", "Sent", "SoftFail", "HardFail"];
+const STATUSES = ["All", "Sent", "HardFail"];
 const PAGE = 12;
 
-export default function TransactionsView() {
-  const { q, setQ, total } = useDashboard();
-  console.log(total)
+export default function TransactionsView({currentUser}) {
+  const { q, setQ, total, tenant } = useDashboard();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -49,15 +48,15 @@ export default function TransactionsView() {
             </button>
           ))}
         </div>
-        <label htmlFor="cat" className="sr-only">Reason</label>
+        {/* <label htmlFor="cat" className="sr-only">Reason</label>
         <select id="cat" className="sel" value={cat} onChange={(e) => setParam("cat", e.target.value, "all")}>
           <option value="all">Any reason</option>
           {CAT_ORDER.map((k) => <option key={k} value={k}>{CATS[k].name}</option>)}
-        </select>
+        </select> */}
       </div>
 
       <section className="card">
-        <TxTable limit={limit} status={status} q = {q} />
+        <TxTable limit={limit} status={status} tenant={tenant} q = {q} currentUser={currentUser} />
         <div className="tfoot">
           <span>Showing {Math.min(limit, total)} of {total}</span>
           {total > limit && (

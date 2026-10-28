@@ -1,12 +1,14 @@
 import { Suspense } from "react";
 import TransactionsView from "@/components/views/TransactionsView";
+import { getCurrentUser } from "@/lib/auth";
 
 export const metadata = { title: "Transactions" };
 
-export default function Page() {
+export default async function Page() {
+  const currentUser = await getCurrentUser()
   return (
     <Suspense fallback={null}>
-      <TransactionsView />
+      <TransactionsView currentUser={currentUser} />
     </Suspense>
   );
 }

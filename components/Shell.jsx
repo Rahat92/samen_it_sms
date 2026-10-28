@@ -11,13 +11,17 @@ import { totals } from "@/lib/stats";
 import { useEffect } from "react";
 
 export default function Shell({ children, currentUser }) {
-  console.log(currentUser) 
+  console.log(currentUser)
   const pathname = usePathname();
   const { range, setRange, tenant, setTenant, scoped, toastMsg } = useDashboard();
   const current = NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href))) ?? NAV[0];
   const badCount = totals(scoped).bad;
   useEffect(() => {
-    setTenant(currentUser.email.split('@')[1])
+    if (currentUser && currentUser.role === 'USER') {
+      setTenant(currentUser.email.split('@')[1])
+    } else if (currentUser.role === 'ADMIN') {
+      setTenant('all')
+    }
   }, [currentUser])
   return (
     <div className="shell">
@@ -58,12 +62,13 @@ export default function Shell({ children, currentUser }) {
               <option value={72}>Last 72 hours</option>
             </select>
             <label htmlFor="tenant" className="sr-only">Tenant</label>
-            <select id="tenant" className="sel" value={tenant} onChange={(e) => setTenant(e.target.value)}>
-              <option value="all">All Tenants</option>
-              {Object.entries(TENANTS).map(([k, t]) => {
-                console.log(t.domain)
+            <select disabled={currentUser && currentUser.role === 'USER'} id="tenant" className="sel" value={tenant} onChange={(e) => setTenant(e.target.value)}>
+              {currentUser.role === 'ADMIN' && (<option value="all">All Tenants</option>)}
+              {currentUser.role === 'ADMIN'?Object.entries(TENANTS).map(([k, t]) => {
                 return <option key={k} value={t.domain}>{t.name}</option>
               }
+              ):(
+                <option value={currentUser.email.split('@')[1]}>{currentUser.name}</option>
               )}
             </select>
             <div className="avatar" aria-hidden="true">AD</div>

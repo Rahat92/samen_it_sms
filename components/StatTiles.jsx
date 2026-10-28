@@ -10,11 +10,11 @@ export default function StatTiles({ t, stats  }) {
       </Link>
       <Link className="stat" href="/transactions?status=Sent">
         <span className="badge green"><Icon name="check" /></span>
-        <small>Successful</small><b>{stats.sent}</b>
+        <small>Delivered</small><b>{stats.sent}</b>
       </Link>
       <Link className="stat" href="/failures">
         <span className="badge red"><Icon name="fail" /></span>
-        <small>Failed / Delayed</small><b>{(stats.softFail+stats.hardFail+stats.other) || 0}</b>
+        <small>Failed</small><b>{(stats.softFail+stats.hardFail+stats.other) || 0}</b>
       </Link>
       <div className="stat">
         <span className="badge amber"><Icon name="pct" /></span>

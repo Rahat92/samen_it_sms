@@ -40,10 +40,14 @@
 * { box-sizing: border-box; }
 html, body { min-height: 100%; }
 body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--font-ui); font-size: 14px; line-height: 1.45; }
-h1, h2, h3, p { margin: 0; }
-button, input, select { font: inherit; color: inherit; }
-button { cursor: pointer; }
-a { color: inherit; text-decoration: none; }
+/* Element resets live in the base layer so Tailwind utilities (and any other
+   layered styles) can override them. Unlayered rules would always win. */
+@layer base {
+  h1, h2, h3, p { margin: 0; }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: inherit; text-decoration: none; }
+}
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 .sr-only { position: absolute; left: -9999px; }
@@ -78,7 +82,7 @@ svg.ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-wid
 .sel { background-color: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 7px 30px 7px 12px; appearance: none; background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%); background-position: calc(100% - 16px) 50%, calc(100% - 11px) 50%; background-size: 5px 5px; background-repeat: no-repeat; font-weight: 500; }
 .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-weight: 700; font-size: 12px; }
 .tag { font-size: 11px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); border: 1px dashed var(--line); border-radius: 6px; padding: 3px 8px; }
-main { padding: 4px 28px 48px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.content > main { padding: 4px 28px 48px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 @media (max-width: 600px) { .top, main { padding-inline: 16px; } }
 
 /* cards */
@@ -138,9 +142,8 @@ a.stat:hover { border-color: var(--accent); }
 .fname { font-weight: 600; }
 .fbar { height: 5px; border-radius: 3px; background: var(--surface-2); margin-top: 6px; overflow: hidden; display: block; }
 .fbar i { display: block; height: 100%; border-radius: 3px; }
-.fbar i.softFail { background: var(--warn); }
-.fbar i.hardFail { background: var(--bad); }
-.fbar i.other { background: var(--bad); }
+.fbar i.Delayed { background: var(--warn); }
+.fbar i.Failed { background: var(--bad); }
 .fcount { font: 500 15px var(--font-mono); color: var(--bad); }
 .fcount.Delayed { color: var(--warn); }
 
@@ -158,7 +161,7 @@ td.wrap { white-space: normal; min-width: 160px; }
 .card .tablewrap th:first-child, .card .tablewrap td:first-child { padding-left: 18px; }
 
 /* toolbar */
-.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; position:sticky; top:0; background: var(--bg); padding: 1rem 0; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .search { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 0 12px; flex: 1 1 240px; min-width: 0; }
 .search input { border: 0; background: none; padding: 8px 0; flex: 1; min-width: 0; outline: none; }
 .search:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }

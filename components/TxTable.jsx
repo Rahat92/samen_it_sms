@@ -7,19 +7,54 @@ import { formatDateTime, stamp } from "@/lib/format";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function TxTable({ limit, status, compact = false, q }) {
-  const { openEvent, setRows, tenant, range, selectedId, setTotal } = useDashboard();
+export default function TxTable({ limit, status, compact = false, q, currentUser, tenant }) {
+  const { openEvent, setRows, range, selectedId, setTotal } = useDashboard();
+  console.log(tenant)
   const [filteredRows, setFilteredRows] = useState([])
   const [query, setQuery] = useState('')
   useEffect(() => {
-    const fetchRows = async () => {
-      const { data } = await axios.get(`/api/events?limit=${limit}&status=${(status === '' || status == 'All') ? '' : status}&tenant=${tenant === 'all' ? '' : tenant}&timeFrom=${range}&q=${query}`)
-      setFilteredRows(await data.rows)
-      setTotal(await data.total)
-      setRows(await data.rows)
+    if (!currentUser) return;
+
+    if (currentUser.role !== 'USER' && currentUser.role !== 'ADMIN') {
+      return;
     }
-    fetchRows()
-  }, [tenant, range, status, query, limit])
+
+    const controller = new AbortController();
+
+    const fetchRows = async () => {
+      try {
+        const params = {
+          limit,
+          status: !status || status === 'All' ? '' : status,
+          tenant:
+            currentUser.role === 'USER'
+              ? currentUser.email.split('@')[1]
+              : tenant === 'all'
+                ? ''
+                : tenant,
+          timeFrom: range,
+          q: query,
+        };
+
+        const { data } = await axios.get('/api/events', {
+          params,
+          signal: controller.signal,
+        });
+
+        setFilteredRows(data.rows);
+        setTotal(data.total);
+        setRows(data.rows);
+      } catch (error) {
+        if (error.code !== 'ERR_CANCELED') {
+          console.error('Failed to fetch events:', error);
+        }
+      }
+    };
+
+    fetchRows();
+
+    return () => controller.abort();
+  }, [tenant, range, status, query, limit, currentUser]);
   useEffect(() => {
     let timer = setTimeout(() => {
       setQuery(q)
@@ -36,7 +71,6 @@ export default function TxTable({ limit, status, compact = false, q }) {
         <thead>
           <tr>
             <th>Sl</th><th>Time</th><th>To</th><th>From</th><th>Subject</th><th>Status</th>
-            {!compact && <th>Reason</th>}
           </tr>
         </thead>
         <tbody>
@@ -50,13 +84,12 @@ export default function TxTable({ limit, status, compact = false, q }) {
                 if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openEvent(r.id); }
               }}
             >
-              <td className="mono dim">{index+1}</td>
+              <td className="mono dim">{index + 1}</td>
               <td className="dim">{formatDateTime(r.occurredAt)}</td>
               <td>{r.toAddress}</td>
               <td>{r.fromAddress}</td>
               <td className="wrap">{r.subject}</td>
               <td><Pill status={r.status} /></td>
-              {!compact && <td className="dim">{r.cat ? CATS[r.cat].name : ""}</td>}
             </tr>
           ))}
         </tbody>

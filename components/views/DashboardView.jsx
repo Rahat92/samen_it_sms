@@ -11,33 +11,35 @@ import { totals } from "@/lib/stats";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function DashboardView({ daily, filters, result, sent, currentUser}) {
-  const { scoped, range, blocked, tenant, rows, setRows, setTenant, graphRows, setGraphRows } = useDashboard();
-  useEffect(() => {
-    setTenant(currentUser.email.split('@')[1])
-  }, [currentUser])
+export default function DashboardView({ result, sent, currentUser }) {
+  const { scoped, range, blocked, tenant, setTenant, graphRows, setGraphRows } = useDashboard();
   const [stats, setStats] = useState({})
-  console.log(range)
   const t = totals(scoped);
-  const res = fetch(`/api/stats?tenant=&timeFrom=`);
 
   useEffect(() => {
-    const fetchStats = async() => {
-      const {data} = await axios.get(`/api/stats?tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
-      setStats(await data)
-    } 
-    // const fetchRows = async() => {
-    //   const {data} = await axios.get(`/api/events?limit=5&status=&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
-    //   setRows(await data.rows)
-    // } 
-    const fetchGraphRows = async() => {
-      const {data} = await axios.get(`/api/graph-events?limit=&status=&tenant=${tenant === 'all'?'':currentUser??tenant}&timeFrom=${range}`)
-      setGraphRows(await data.rows)
-    } 
+    const fetchStats = async () => {
+      if (currentUser && currentUser.role == 'USER') {
+        const { data } = await axios.get(`/api/stats?tenant=${currentUser.email.split('@')[1]}&timeFrom=${range}`)
+        setStats(await data)
+      } else if (currentUser.role == 'ADMIN') {
+        const { data } = await axios.get(`/api/stats?tenant=${tenant==='all'?'':tenant}&timeFrom=${range}`)
+        setStats(await data)
+      }
+    }
+
+    const fetchGraphRows = async () => {
+      if (currentUser && currentUser.role == 'USER') {
+        const { data } = await axios.get(`/api/graph-events?limit=&status=&tenant=${currentUser.email.split('@')[1]}&timeFrom=${range}`)
+        setGraphRows(await data.rows)
+      } else if (currentUser.role == 'ADMIN') {
+        const { data } = await axios.get(`/api/graph-events?limit=&status=&tenant=${tenant==='all'?'':tenant}&timeFrom=${range}`)
+        setGraphRows(await data.rows)
+      }
+    }
     fetchGraphRows()
     // fetchRows()
     fetchStats()
-  }, [tenant, range, currentUser]) 
+  }, [tenant, range, currentUser])
   return (
     <>
       <StatTiles t={t} stats={stats} sent={sent} />
@@ -60,7 +62,7 @@ export default function DashboardView({ daily, filters, result, sent, currentUse
             <div><h2>Recent transactions</h2><p className="hint">Click a row for the full detail</p></div>
             <Link className="link" href="/transactions">View all</Link>
           </header>
-          <TxTable list={result.rows} limit={6} status={'All'} q="" compact />
+          <TxTable list={result.rows} limit={6} status={'All'} q="" compact tenant={tenant} currentUser={currentUser} />
         </section>
         <section className="card">
           <header>

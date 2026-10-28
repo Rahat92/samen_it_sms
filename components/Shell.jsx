@@ -2,27 +2,84 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 import Icon from "./Icon";
 import Drawer from "./Drawer";
+import DateRangePicker, { addDays } from "./Daterangepicker";
 import { useDashboard } from "./DashboardProvider";
 import { NAV } from "@/lib/nav";
 import { TENANTS } from "@/lib/sample-data";
 import { totals } from "@/lib/stats";
-import { useEffect } from "react";
+
+// YYYY-MM-DD in Asia/Dhaka
+const fmt = (d) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+
+// Dhaka is UTC+6 with no DST, so day boundaries are fixed-offset
+const dhakaDayStart = (ymd) => new Date(`${ymd}T00:00:00+06:00`).getTime();
+const dhakaDayEnd = (ymd) => new Date(`${ymd}T23:59:59.999+06:00`).getTime();
 
 export default function Shell({ children, currentUser }) {
-  console.log(currentUser)
   const pathname = usePathname();
   const { range, setRange, tenant, setTenant, scoped, toastMsg } = useDashboard();
-  const current = NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href))) ?? NAV[0];
+
+  const current =
+    NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href))) ?? NAV[0];
   const badCount = totals(scoped).bad;
+
+  // Period selector: "today" | "custom" | "<hours>"
+  const today = fmt(new Date());
+  const minDate = addDays(today, -30); // allowed window: last 30 days
+  const [mode, setMode] = useState("24");
+  const [calOpen, setCalOpen] = useState(false);
+  const [customRange, setCustomRange] = useState({ from: addDays(today, -7), to: today });
+  const [applied, setApplied] = useState(false); // has the user confirmed a custom range yet?
+  const prevMode = useRef("24");
+
   useEffect(() => {
-    if (currentUser && currentUser.role === 'USER') {
-      setTenant(currentUser.email.split('@')[1])
-    } else if (currentUser.role === 'ADMIN') {
-      setTenant('all')
+    if (mode === "today") {
+      setRange({ from: dhakaDayStart(fmt(new Date())), to: Date.now() });
+    } else if (mode === "custom") {
+      setRange({
+        from: dhakaDayStart(customRange.from),
+        to: Math.min(dhakaDayEnd(customRange.to), Date.now()),
+      });
+    } else {
+      setRange(Number(mode)); // plain hours, as before
     }
-  }, [currentUser])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode, customRange]);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    if (currentUser.role === "USER") {
+      setTenant(currentUser.email.split("@")[1]);
+    } else if (currentUser.role === "ADMIN") {
+      setTenant("all");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
+
+  const onPeriodChange = (e) => {
+    const v = e.target.value;
+    if (v === "custom") {
+      if (mode !== "custom") prevMode.current = mode;
+      setMode("custom");
+      setCalOpen(true); // open the calendar as soon as "Custom" is chosen
+    } else {
+      setMode(v);
+      setCalOpen(false);
+    }
+  };
+
+  const onCalOpenChange = (open) => {
+    setCalOpen(open);
+    // Closed without ever applying a range: go back to the previous period
+    if (!open && !applied && mode === "custom") setMode(prevMode.current);
+  };
+
+  const isAdmin = currentUser?.role === "ADMIN";
+  const isUser = currentUser?.role === "USER";
+
   return (
     <div className="shell">
       <aside className="side">
@@ -32,7 +89,12 @@ export default function Shell({ children, currentUser }) {
         </div>
         <nav style={{ display: "contents" }} aria-label="Sections">
           {NAV.map((n) => (
-            <Link key={n.href} href={n.href} className="nav" aria-current={n === current ? "page" : undefined}>
+            <Link
+              key={n.href}
+              href={n.href}
+              className="nav"
+              aria-current={n === current ? "page" : undefined}
+            >
               <Icon name={n.icon} />
               <span>{n.label}</span>
               {n.href === "/failures" && badCount > 0 && <span className="count">{badCount}</span>}
@@ -53,24 +115,52 @@ export default function Shell({ children, currentUser }) {
           </div>
           <div className="controls">
             <span className="tag">Sample data</span>
+
             <label htmlFor="range" className="sr-only">Period</label>
-            <select id="range" className="sel" value={range} onChange={(e) => setRange(Number(e.target.value))}>
-              <option value={1}>Last hour</option>
-              <option value={6}>Last 6 hours</option>
-              <option value={24}>Last 24 hours</option>
-              <option value={48}>Last 48 hours</option>
-              <option value={72}>Last 72 hours</option>
+            <select id="range" className="sel" value={mode} onChange={onPeriodChange}>
+              <option value="today">Today</option>
+              <option value="1">Last hour</option>
+              <option value="6">Last 6 hours</option>
+              <option value="24">Last 24 hours</option>
+              <option value="48">Last 48 hours</option>
+              <option value="72">Last 72 hours</option>
+              <option value="custom">Custom range…</option>
             </select>
+
+            {mode === "custom" && (
+              <DateRangePicker
+                open={calOpen}
+                onOpenChange={onCalOpenChange}
+                value={customRange}
+                minDate={minDate}
+                maxDate={today}
+                onApply={(r) => {
+                  setCustomRange(r);
+                  setApplied(true);
+                }}
+              />
+            )}
+
             <label htmlFor="tenant" className="sr-only">Tenant</label>
-            <select disabled={currentUser && currentUser.role === 'USER'} id="tenant" className="sel" value={tenant} onChange={(e) => setTenant(e.target.value)}>
-              {currentUser.role === 'ADMIN' && (<option value="all">All Tenants</option>)}
-              {currentUser.role === 'ADMIN'?Object.entries(TENANTS).map(([k, t]) => {
-                return <option key={k} value={t.domain}>{t.name}</option>
-              }
-              ):(
-                <option value={currentUser.email.split('@')[1]}>{currentUser.name}</option>
+            <select
+              disabled={isUser}
+              id="tenant"
+              className="sel"
+              value={tenant}
+              onChange={(e) => setTenant(e.target.value)}
+            >
+              {isAdmin && <option value="all">All Tenants</option>}
+              {isAdmin ? (
+                Object.entries(TENANTS).map(([k, t]) => (
+                  <option key={k} value={t.domain}>{t.name}</option>
+                ))
+              ) : (
+                currentUser && (
+                  <option value={currentUser.email.split("@")[1]}>{currentUser.name}</option>
+                )
               )}
             </select>
+
             <div className="avatar" aria-hidden="true">AD</div>
           </div>
         </header>

@@ -8,13 +8,17 @@ import { useDashboard } from "./DashboardProvider";
 import { NAV } from "@/lib/nav";
 import { TENANTS } from "@/lib/sample-data";
 import { totals } from "@/lib/stats";
+import { useEffect } from "react";
 
-export default function Shell({ children }) {
+export default function Shell({ children, currentUser }) {
+  console.log(currentUser) 
   const pathname = usePathname();
   const { range, setRange, tenant, setTenant, scoped, toastMsg } = useDashboard();
   const current = NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href))) ?? NAV[0];
   const badCount = totals(scoped).bad;
-
+  useEffect(() => {
+    setTenant(currentUser.email.split('@')[1])
+  }, [currentUser])
   return (
     <div className="shell">
       <aside className="side">
@@ -57,7 +61,7 @@ export default function Shell({ children }) {
             <select id="tenant" className="sel" value={tenant} onChange={(e) => setTenant(e.target.value)}>
               <option value="all">All Tenants</option>
               {Object.entries(TENANTS).map(([k, t]) => {
-                console.log(t);
+                console.log(t.domain)
                 return <option key={k} value={t.domain}>{t.name}</option>
               }
               )}

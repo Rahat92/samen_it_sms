@@ -11,8 +11,11 @@ import { totals } from "@/lib/stats";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function DashboardView({ daily, filters, result, sent}) {
-  const { scoped, range, blocked, tenant, rows, setRows, graphRows, setGraphRows } = useDashboard();
+export default function DashboardView({ daily, filters, result, sent, currentUser}) {
+  const { scoped, range, blocked, tenant, rows, setRows, setTenant, graphRows, setGraphRows } = useDashboard();
+  useEffect(() => {
+    setTenant(currentUser.email.split('@')[1])
+  }, [currentUser])
   const [stats, setStats] = useState({})
   console.log(range)
   const t = totals(scoped);
@@ -28,13 +31,13 @@ export default function DashboardView({ daily, filters, result, sent}) {
     //   setRows(await data.rows)
     // } 
     const fetchGraphRows = async() => {
-      const {data} = await axios.get(`/api/graph-events?limit=&status=&tenant=${tenant === 'all'?'':tenant}&timeFrom=${range}`)
+      const {data} = await axios.get(`/api/graph-events?limit=&status=&tenant=${tenant === 'all'?'':currentUser??tenant}&timeFrom=${range}`)
       setGraphRows(await data.rows)
     } 
     fetchGraphRows()
     // fetchRows()
     fetchStats()
-  }, [tenant, range]) 
+  }, [tenant, range, currentUser]) 
   return (
     <>
       <StatTiles t={t} stats={stats} sent={sent} />

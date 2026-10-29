@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useDashboard } from "./DashboardProvider";
 
 const pad = (n) => String(n).padStart(2, "0");
 const toYmd = (y, m, d) => `${y}-${pad(m + 1)}-${pad(d)}`; // m is 0-based
 const parts = (ymd) => {
-  const [y, m, d] = ymd.split("-").map(Number);
+  const [y, m, d] = ymd?.split("-")?.map(Number);
   return { y, m: m - 1, d };
 };
 
@@ -26,6 +27,7 @@ const label = (ymd) =>
 const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 export default function DateRangePicker({ open, onOpenChange, value, onApply, minDate, maxDate }) {
+
   const wrapRef = useRef(null);
   const [start, setStart] = useState(value.from);
   const [end, setEnd] = useState(value.to);
@@ -35,7 +37,6 @@ export default function DateRangePicker({ open, onOpenChange, value, onApply, mi
     return { y: p.y, m: p.m };
   });
 
-  // Reset the draft each time the calendar opens
   useEffect(() => {
     if (open) {
       setStart(value.from);
@@ -44,10 +45,8 @@ export default function DateRangePicker({ open, onOpenChange, value, onApply, mi
       const p = parts(value.to || maxDate);
       setView({ y: p.y, m: p.m });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  // Close on outside click or Escape
   useEffect(() => {
     if (!open) return;
     const onDown = (e) => {

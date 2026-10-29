@@ -15,7 +15,7 @@ export async function GET(request) {
       fromParam && toParam
         ? { from: Number(fromParam), to: Number(toParam) }
         : searchParams.get("timeFrom") || 24;
-
+    console.log('hello', range, fromParam, toParam)
     const events = await getGraphEvents({ tenant, range, status });
     return NextResponse.json(events);
   } catch (error) {

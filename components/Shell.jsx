@@ -20,27 +20,24 @@ const dhakaDayEnd = (ymd) => new Date(`${ymd}T23:59:59.999+06:00`).getTime();
 
 export default function Shell({ children, currentUser }) {
   const pathname = usePathname();
-  const { range, setRange, tenant, setTenant, scoped, toastMsg } = useDashboard();
+  const { range, setRange, tenant, setTenant, scoped, toastMsg, customRange, setCustomRange } = useDashboard();
 
   const current =
     NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href))) ?? NAV[0];
   const badCount = totals(scoped).bad;
 
-  // Period selector: "today" | "custom" | "<hours>"
   const today = fmt(new Date());
-  const minDate = addDays(today, -30); // allowed window: last 30 days
+  const minDate = addDays(today, -30);
   const [mode, setMode] = useState("24");
   const [calOpen, setCalOpen] = useState(false);
-  const [customRange, setCustomRange] = useState({ from: addDays(today, -7), to: today });
-  console.log(customRange)
-  const [applied, setApplied] = useState(false); // has the user confirmed a custom range yet?
+  const [applied, setApplied] = useState(false);
   const prevMode = useRef("24");
 
   useEffect(() => {
     if (mode === "today") {
-      setRange({ from: dhakaDayStart(fmt(new Date())), to: Date.now() });
+      setCustomRange({ from: dhakaDayStart(fmt(new Date())), to: Date.now() });
     } else if (mode === "custom") {
-      setRange({
+      setCustomRange({
         from: dhakaDayStart(customRange.from),
         to: Math.min(dhakaDayEnd(customRange.to), Date.now()),
       });
@@ -48,8 +45,7 @@ export default function Shell({ children, currentUser }) {
       setRange(Number(mode)); // plain hours, as before
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mode, customRange]);
-
+  }, [mode]);
   useEffect(() => {
     if (!currentUser) return;
     if (currentUser.role === "USER") {
@@ -62,7 +58,6 @@ export default function Shell({ children, currentUser }) {
 
   const onPeriodChange = (e) => {
     const v = e.target.value;
-    console.log(v)
     if (v === "custom") {
       if (mode !== "custom") prevMode.current = mode;
       setMode("custom");

@@ -11,7 +11,7 @@ const STATUSES = ["All", "Sent", "HardFail"];
 const PAGE = 12;
 
 export default function TransactionsView({currentUser}) {
-  const { q, setQ, total, tenant } = useDashboard();
+  const { q, setQ, total, tenant, customRange } = useDashboard();
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -56,7 +56,7 @@ export default function TransactionsView({currentUser}) {
       </div>
 
       <section className="card">
-        <TxTable limit={limit} status={status} tenant={tenant} q = {q} currentUser={currentUser} />
+        <TxTable limit={limit} status={status} tenant={tenant} customRange = {customRange} q = {q} currentUser={currentUser} />
         <div className="tfoot">
           <span>Showing {Math.min(limit, total)} of {total}</span>
           {total > limit && (

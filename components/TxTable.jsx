@@ -8,8 +8,7 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 export default function TxTable({ limit, status, compact = false, q, currentUser, tenant }) {
-  const { openEvent, setRows, range, selectedId, setTotal } = useDashboard();
-  console.log(tenant)
+  const { openEvent, setRows, range, selectedId, setTotal, customRange } = useDashboard();
   const [filteredRows, setFilteredRows] = useState([])
   const [query, setQuery] = useState('')
   useEffect(() => {
@@ -32,7 +31,9 @@ export default function TxTable({ limit, status, compact = false, q, currentUser
               : tenant === 'all'
                 ? ''
                 : tenant,
-          timeFrom: range,
+          timeFrom: !range.from?range:'',
+          from: customRange.from,
+          to: customRange.to,
           q: query,
         };
 
@@ -54,7 +55,7 @@ export default function TxTable({ limit, status, compact = false, q, currentUser
     fetchRows();
 
     return () => controller.abort();
-  }, [tenant, range, status, query, limit, currentUser]);
+  }, [tenant, range, status, query, limit, currentUser, customRange]);
   useEffect(() => {
     let timer = setTimeout(() => {
       setQuery(q)

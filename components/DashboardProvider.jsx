@@ -3,10 +3,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { rows, INITIAL_BLOCKED, INITIAL_HISTORY } from "@/lib/sample-data";
 import { HOUR, NOW } from "@/lib/format";
-
+import { addDays } from "./Daterangepicker";
+const fmt = (d) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
 const Ctx = createContext(null);
-
 export function DashboardProvider({ children }) {
+  const today = fmt(new Date());
   const [range, setRange] = useState(24);
   const [total, setTotal] = useState(null);
   const [q, setQ] = useState('');
@@ -18,6 +19,7 @@ export function DashboardProvider({ children }) {
   const [selectedId, setSelectedId] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
   const toastTimer = useRef(null);
+  const [customRange, setCustomRange] = useState({ from: addDays(today, -7), to: today });
 
   const scoped = useMemo(() => {
     const from = NOW - range * HOUR;
@@ -59,8 +61,8 @@ export function DashboardProvider({ children }) {
   );
 
   const value = {
-    rows, setRows, graphRows, setGraphRows, q, setQ, total, setTotal,
-    range, setRange, tenant, setTenant, scoped, 
+    rows, setRows, graphRows, setGraphRows, q, setQ, total, setTotal,customRange, setCustomRange,
+    range, setRange, tenant, setTenant, scoped,
     blocked, history, isBlocked, addBlock, removeBlock,
     selectedId, openEvent: setSelectedId, closeEvent: () => setSelectedId(null),
     toastMsg, toast, copy,

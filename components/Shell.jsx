@@ -32,6 +32,7 @@ export default function Shell({ children, currentUser }) {
   const [mode, setMode] = useState("24");
   const [calOpen, setCalOpen] = useState(false);
   const [customRange, setCustomRange] = useState({ from: addDays(today, -7), to: today });
+  console.log(customRange)
   const [applied, setApplied] = useState(false); // has the user confirmed a custom range yet?
   const prevMode = useRef("24");
 
@@ -61,6 +62,7 @@ export default function Shell({ children, currentUser }) {
 
   const onPeriodChange = (e) => {
     const v = e.target.value;
+    console.log(v)
     if (v === "custom") {
       if (mode !== "custom") prevMode.current = mode;
       setMode("custom");

@@ -12,12 +12,10 @@ import { TENANTS } from "@/lib/sample-data";
 import { totals } from "@/lib/stats";
 
 // YYYY-MM-DD in Asia/Dhaka
-const fmt = (d) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
-
+const fmt = (d) =>d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
 // Dhaka is UTC+6 with no DST, so day boundaries are fixed-offset
 const dhakaDayStart = (ymd) => new Date(`${ymd}T00:00:00+06:00`).getTime();
 const dhakaDayEnd = (ymd) => new Date(`${ymd}T23:59:59.999+06:00`).getTime();
-
 export default function Shell({ children, currentUser }) {
   const pathname = usePathname();
   const { range, setRange, tenant, setTenant, scoped, toastMsg, customRange, setCustomRange } = useDashboard();
@@ -35,8 +33,13 @@ export default function Shell({ children, currentUser }) {
 
   useEffect(() => {
     if (mode === "today") {
-      setCustomRange({ from: dhakaDayStart(fmt(new Date())), to: Date.now() });
+      console.log(dhakaDayStart(fmt(new Date())))
+      setCustomRange({
+        from: fmt(new Date(dhakaDayStart(fmt(new Date())))),
+        to: fmt(new Date()),
+      });
     } else if (mode === "custom") {
+      console.log(customRange.from)
       setCustomRange({
         from: dhakaDayStart(customRange.from),
         to: Math.min(dhakaDayEnd(customRange.to), Date.now()),

@@ -8,7 +8,7 @@ const fmt = (d) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
 const Ctx = createContext(null);
 export function DashboardProvider({ children }) {
   const today = fmt(new Date());
-  const [range, setRange] = useState(24);
+  const [range, setRange] = useState('');
   const [total, setTotal] = useState(null);
   const [q, setQ] = useState('');
   const [rows, setRows] = useState([]);

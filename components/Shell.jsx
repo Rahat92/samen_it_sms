@@ -26,20 +26,18 @@ export default function Shell({ children, currentUser }) {
 
   const today = fmt(new Date());
   const minDate = addDays(today, -30);
-  const [mode, setMode] = useState("24");
+  const [mode, setMode] = useState("today");
   const [calOpen, setCalOpen] = useState(false);
   const [applied, setApplied] = useState(false);
   const prevMode = useRef("24");
 
   useEffect(() => {
     if (mode === "today") {
-      console.log(dhakaDayStart(fmt(new Date())))
       setCustomRange({
         from: fmt(new Date(dhakaDayStart(fmt(new Date())))),
         to: fmt(new Date()),
       });
     } else if (mode === "custom") {
-      console.log(customRange.from)
       setCustomRange({
         from: dhakaDayStart(customRange.from),
         to: Math.min(dhakaDayEnd(customRange.to), Date.now()),
@@ -47,8 +45,16 @@ export default function Shell({ children, currentUser }) {
     } else {
       setRange(Number(mode)); // plain hours, as before
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mode]);
+  useEffect(() => {
+    if(range){
+      setCustomRange({from:'', to:''})
+    }
+    if(customRange.from){
+      setRange('')
+    }
+  }, [range, customRange])
+  console.log(mode)
   useEffect(() => {
     if (!currentUser) return;
     if (currentUser.role === "USER") {

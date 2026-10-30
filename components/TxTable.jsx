@@ -19,7 +19,6 @@ export default function TxTable({ limit, status, compact = false, q, currentUser
     }
 
     const controller = new AbortController();
-    console.log('inf ', range, customRange)
     const fetchRows = async () => {
       try {
         const params = {

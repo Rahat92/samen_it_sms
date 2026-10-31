@@ -44,4 +44,6 @@ model MailEvent {
 
   @@index([event])
   @@index([toAddress])
+  @@index([occurredAt(sort: Desc)])
+  @@index([status, occurredAt(sort: Desc)])
 }

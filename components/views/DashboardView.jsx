@@ -12,34 +12,36 @@ import { useEffect, useState } from "react";
 import axios from "axios";
 
 export default function DashboardView({ result, sent, currentUser }) {
-  const { scoped, range, blocked, tenant, setTenant, graphRows, setGraphRows } = useDashboard();
+  const { scoped, range, blocked, tenant, setTenant, graphRows, setGraphRows, customRange } = useDashboard();
+  console.log(customRange)
   const [stats, setStats] = useState({})
   const t = totals(scoped);
 
   useEffect(() => {
+    console.log(customRange)
     const fetchStats = async () => {
       if (currentUser && currentUser.role == 'USER') {
-        const { data } = await axios.get(`/api/stats?tenant=${currentUser.email.split('@')[1]}&timeFrom=${range}`)
+        const { data } = await axios.get(`/api/stats?tenant=${currentUser.email.split('@')[1]}&timeFrom=${range}&from=${customRange.from}&to=${customRange.to}`)
         setStats(await data)
       } else if (currentUser.role == 'ADMIN') {
-        const { data } = await axios.get(`/api/stats?tenant=${tenant==='all'?'':tenant}&timeFrom=${range}`)
+        const { data } = await axios.get(`/api/stats?tenant=${tenant==='all'?'':tenant}&timeFrom=${range}&from=${customRange.from}&to=${customRange.to}`)
         setStats(await data)
       }
     }
 
     const fetchGraphRows = async () => {
       if (currentUser && currentUser.role == 'USER') {
-        const { data } = await axios.get(`/api/graph-events?limit=&status=&tenant=${currentUser.email.split('@')[1]}&timeFrom=${range}`)
+        const { data } = await axios.get(`/api/graph-events?limit=&status=&tenant=${currentUser.email.split('@')[1]}&timeFrom=${range}&from=${customRange.from}&to=${customRange.to}`)
         setGraphRows(await data.rows)
       } else if (currentUser.role == 'ADMIN') {
-        const { data } = await axios.get(`/api/graph-events?limit=&status=&tenant=${tenant==='all'?'':tenant}&timeFrom=${range}`)
+        const { data } = await axios.get(`/api/graph-events?limit=&status=&tenant=${tenant==='all'?'':tenant}&timeFrom=${range}&from=${customRange.from}&to=${customRange.to}`)
         setGraphRows(await data.rows)
       }
     }
     fetchGraphRows()
     // fetchRows()
     fetchStats()
-  }, [tenant, range, currentUser])
+  }, [tenant, range, currentUser, customRange])
   return (
     <>
       <StatTiles t={t} stats={stats} sent={sent} />

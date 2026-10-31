@@ -19,7 +19,7 @@ export function DashboardProvider({ children }) {
   const [selectedId, setSelectedId] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
   const toastTimer = useRef(null);
-  const [customRange, setCustomRange] = useState({ from: addDays(today, -7), to: today });
+  const [customRange, setCustomRange] = useState({ from: addDays(today, -0), to: today });
 
   const scoped = useMemo(() => {
     const from = NOW - range * HOUR;

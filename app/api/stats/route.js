@@ -8,14 +8,13 @@ export async function GET(request) {
 
     // Custom / Today window: ?from=<ms>&to=<ms>
     // Rolling window:        ?timeFrom=<hours>   (default 24)
+    const hours = searchParams.get("timeFrom");
     const fromParam = searchParams.get("from");
     const toParam = searchParams.get("to");
-    const timeFrom =
-      fromParam && toParam
-        ? { from: Number(fromParam), to: Number(toParam) }
-        : searchParams.get("timeFrom") || 24;
+    const range = hours ? Number(hours) : { from: fromParam, to: toParam };
 
-    const stats = await getStats(tenant, timeFrom);
+
+    const stats = await getStats(tenant, range);
     return NextResponse.json(stats);
   } catch (error) {
     console.error(error);

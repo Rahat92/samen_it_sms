@@ -43,20 +43,20 @@ export default function DashboardView({ result, sent, currentUser }) {
   return (
     <>
       <StatTiles t={t} stats={stats} sent={sent} />
-      <div className="grid-2">
+      <div className="grid-1">
         <section className="card">
           <header><div><h2>Email volume</h2><p className="hint">Sent versus failed or delayed</p></div></header>
           <div className="pad"><VolumeChart events={graphRows} hours={range} /></div>
         </section>
-        <section className="card">
+        {/* <section className="card">
           <header>
             <div><h2>Failures</h2><p className="hint">Errors and troubleshooting</p></div>
             <Link className="link" href="/failures">View all</Link>
           </header>
           <div className="pad"><FailureList stats={stats} limit={5} /></div>
-        </section>
+        </section> */}
       </div>
-      <div className="grid-2">
+      {/* <div className="grid-2">
         <section className="card">
           <header>
             <div><h2>Recent transactions</h2><p className="hint">Click a row for the full detail</p></div>
@@ -71,7 +71,7 @@ export default function DashboardView({ result, sent, currentUser }) {
           </header>
           <BlockTable compact />
         </section>
-      </div>
+      </div> */}
     </>
   );
 }

@@ -12,7 +12,6 @@ export const metadata = { title: { absolute: "Dashboard · Mail Dashboard" } };
 
 export default async function Page() {
   const currentUser = await getCurrentUser()
-  console.log(currentUser);
   const [stats, daily, filters, result ] = await Promise.all([
     getStats(''),
     getDaily(),

@@ -7,7 +7,7 @@ import TxTable from "../TxTable";
 import { useDashboard } from "../DashboardProvider";
 import { CATS, CAT_ORDER } from "@/lib/sample-data";
 
-const STATUSES = ["All", "Sent", "HardFail"];
+const STATUSES = ["All", "Sent", "HardFail", "Held"];
 const PAGE = 12;
 
 export default function TransactionsView({currentUser}) {
@@ -44,7 +44,7 @@ export default function TransactionsView({currentUser}) {
         <div className="chips" role="group" aria-label="Status">
           {STATUSES.map((s) => (
             <button key={s} className="chip" aria-pressed={status === s} onClick={() => setParam("status", s, "All")}>
-              {s}
+              {s==='Held'?'Pending':s}
             </button>
           ))}
         </div>

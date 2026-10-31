@@ -13,9 +13,6 @@ export async function GET(request) {
     const fromParam = searchParams.get("from");
     const toParam = searchParams.get("to");
     const hours = searchParams.get("timeFrom");
-    // const range = fromParam && toParam
-    //   ? { from: fromParam, to: toParam }
-    //   : Number(hours) || 24;
     const range = hours?Number(hours):{ from: fromParam, to: toParam };
 
 

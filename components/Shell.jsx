@@ -12,13 +12,12 @@ import { TENANTS } from "@/lib/sample-data";
 import { totals } from "@/lib/stats";
 
 // YYYY-MM-DD in Asia/Dhaka
-const fmt = (d) =>d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
-// Dhaka is UTC+6 with no DST, so day boundaries are fixed-offset
-const dhakaDayStart = (ymd) => new Date(`${ymd}T00:00:00+06:00`).getTime();
-const dhakaDayEnd = (ymd) => new Date(`${ymd}T23:59:59.999+06:00`).getTime();
+const fmt = (d) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
+
 export default function Shell({ children, currentUser }) {
   const pathname = usePathname();
-  const { range, setRange, tenant, setTenant, scoped, toastMsg, customRange, setCustomRange } = useDashboard();
+  const { range, setRange, tenant, setTenant, scoped, toastMsg, customRange, setCustomRange } =
+    useDashboard();
 
   const current =
     NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href))) ?? NAV[0];
@@ -26,35 +25,34 @@ export default function Shell({ children, currentUser }) {
 
   const today = fmt(new Date());
   const minDate = addDays(today, -30);
+
   const [mode, setMode] = useState("today");
   const [calOpen, setCalOpen] = useState(false);
-  const [applied, setApplied] = useState(false);
-  const prevMode = useRef("24");
+  const prevMode = useRef("today");
+  const customApplied = useRef(false); // true once the user confirmed a custom range
 
-  useEffect(() => {
-    if (mode === "today") {
-      setCustomRange({
-        from: fmt(new Date(dhakaDayStart(fmt(new Date())))),
-        to: fmt(new Date()),
-      });
-    } else if (mode === "custom") {
-      setCustomRange({
-        from: dhakaDayStart(customRange.from),
-        to: Math.min(dhakaDayEnd(customRange.to), Date.now()),
-      });
+  // Exactly ONE of the two is set at a time, and both are changed together here,
+  // so nothing needs effects that clear each other.
+  //   hours  -> range = <number>, customRange = { from: "", to: "" }
+  //   today  -> range = "",       customRange = { from: today, to: today }
+  //   custom -> range = "",       customRange = { from, to }   (YYYY-MM-DD strings)
+  const applyPeriod = (v) => {
+    if (v === "today") {
+      const t = fmt(new Date());
+      setRange("");
+      setCustomRange({ from: t, to: t });
     } else {
-      setRange(Number(mode)); // plain hours, as before
+      setRange(Number(v));
+      setCustomRange({ from: "", to: "" });
     }
-  }, [mode]);
+  };
+
+  // Apply the initial period once, so the dashboard state matches the select
   useEffect(() => {
-    if(range){
-      setCustomRange({from:'', to:''})
-    }
-    if(customRange.from){
-      setRange('')
-    }
-  }, [range, customRange])
-  console.log(mode)
+    applyPeriod("today");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   useEffect(() => {
     if (!currentUser) return;
     if (currentUser.role === "USER") {
@@ -71,17 +69,32 @@ export default function Shell({ children, currentUser }) {
       if (mode !== "custom") prevMode.current = mode;
       setMode("custom");
       setCalOpen(true); // open the calendar as soon as "Custom" is chosen
+      // data stays as it is until the user presses Apply
     } else {
+      customApplied.current = false;
       setMode(v);
       setCalOpen(false);
+      applyPeriod(v);
     }
   };
 
   const onCalOpenChange = (open) => {
     setCalOpen(open);
-    // Closed without ever applying a range: go back to the previous period
-    if (!open && !applied && mode === "custom") setMode(prevMode.current);
+    // Closed without applying a range: go back to the previous period
+    if (!open && mode === "custom" && !customApplied.current) setMode(prevMode.current);
   };
+
+  const onApply = (r) => {
+    customApplied.current = true;
+    setRange("");
+    setCustomRange({ from: r.from, to: r.to });
+  };
+
+  // The picker needs YYYY-MM-DD strings; fall back to the last 7 days
+  const pickerValue =
+    typeof customRange?.from === "string" && customRange.from
+      ? customRange
+      : { from: addDays(today, -7), to: today };
 
   const isAdmin = currentUser?.role === "ADMIN";
   const isUser = currentUser?.role === "USER";
@@ -137,13 +150,10 @@ export default function Shell({ children, currentUser }) {
               <DateRangePicker
                 open={calOpen}
                 onOpenChange={onCalOpenChange}
-                value={customRange}
+                value={pickerValue}
                 minDate={minDate}
                 maxDate={today}
-                onApply={(r) => {
-                  setCustomRange(r);
-                  setApplied(true);
-                }}
+                onApply={onApply}
               />
             )}
 

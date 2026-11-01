@@ -10,6 +10,7 @@ import { useDashboard } from "./DashboardProvider";
 import { NAV } from "@/lib/nav";
 import { TENANTS } from "@/lib/sample-data";
 import { totals } from "@/lib/stats";
+import UserMenu from "./Usermenu";
 
 // YYYY-MM-DD in Asia/Dhaka
 const fmt = (d) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
@@ -78,6 +79,14 @@ export default function Shell({ children, currentUser }) {
     }
   };
 
+  const signOut = async ({ callbackUrl }) => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+      window.location.href = callbackUrl;
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
+  };
   const onCalOpenChange = (open) => {
     setCalOpen(open);
     // Closed without applying a range: go back to the previous period
@@ -177,7 +186,8 @@ export default function Shell({ children, currentUser }) {
               )}
             </select>
 
-            <div className="avatar" aria-hidden="true">AD</div>
+            {/* <div className="avatar" aria-hidden="true">AD</div> */}
+            <UserMenu user={currentUser} onLogout={() => signOut({ callbackUrl: "/login" })} />
           </div>
         </header>
         <main>{children}</main>

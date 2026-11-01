@@ -16,6 +16,10 @@ export default function StatTiles({ t, stats  }) {
         <span className="badge red"><Icon name="fail" /></span>
         <small>Failed</small><b>{(stats.softFail+stats.hardFail+stats.other) || 0}</b>
       </Link>
+      <Link className="stat" href="/transactions?status=Held">
+        <span className="badge red"><Icon name="clock" /></span>
+        <small>Pending</small><b>{(stats.held) || 0}</b>
+      </Link>
       <div className="stat">
         <span className="badge amber"><Icon name="pct" /></span>
         <small>Success Rate</small><b>{stats?.rate?.toFixed(2)}%</b>

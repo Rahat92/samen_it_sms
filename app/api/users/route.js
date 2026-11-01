@@ -24,6 +24,7 @@ export async function POST(request) {
     const name = String(formData.get("name") ?? "").trim();
     const email = String(formData.get("email") ?? "").toLowerCase().trim();
     const password = String(formData.get("password") ?? "");
+    const domain = String(formData.get("domain") ?? "").trim();
     const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
     const photo = formData.get("photo");
 
@@ -113,6 +114,7 @@ export async function POST(request) {
         password: passwordHash,
         role,
         photo: photoPath,
+        domain: domain || null,
       },
       omit: { password: true },
     });

@@ -133,7 +133,7 @@ export default function Shell({ children, currentUser }) {
             <p className="sub">{current.sub}</p>
           </div>
           <div className="controls">
-            <span className="tag">Sample data</span>
+            {/* <span className="tag">Sample data</span> */}
 
             <label htmlFor="range" className="sr-only">Period</label>
             <select id="range" className="sel" value={mode} onChange={onPeriodChange}>

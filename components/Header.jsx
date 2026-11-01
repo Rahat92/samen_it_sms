@@ -24,9 +24,9 @@ export default function Header() {
       </div>
 
       <div className="flex items-center gap-2.5">
-        <span className="rounded border border-line bg-white/60 px-2 py-1 text-[8px] font-medium uppercase tracking-wider text-muted">
+        {/* <span className="rounded border border-line bg-white/60 px-2 py-1 text-[8px] font-medium uppercase tracking-wider text-muted">
           Sample data
-        </span>
+        </span> */}
         <Select className="w-[100px]">
           <option>Last 24 hours</option>
           <option>Last 7 days</option>

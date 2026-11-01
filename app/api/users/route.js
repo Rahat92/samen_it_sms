@@ -1,7 +1,9 @@
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-
+import { NextResponse } from "next/server";
+import fs from "fs/promises";
+import path from "path";
 export async function GET() {
   const { response } = await requireRole("ADMIN");
   console.log(response)
@@ -17,19 +19,33 @@ export async function GET() {
 
 export async function POST(request) {
   try {
-    const body = await request.json();
-    const name = String(body.name ?? "").trim();
-    const email = String(body.email ?? "").toLowerCase().trim();
-    const password = String(body.password ?? "");
-    const passwordConfirm = String(body.passwordConfirm ?? ""); 
+    const formData = await request.formData();
+
+    const name = String(formData.get("name") ?? "").trim();
+    const email = String(formData.get("email") ?? "").toLowerCase().trim();
+    const password = String(formData.get("password") ?? "");
+    const passwordConfirm = String(formData.get("passwordConfirm") ?? "");
+    const photo = formData.get("photo");
+
     if (!name || !email || !password) {
-      return Response.json({ error: "Name, email and password are required" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Name, email and password are required" },
+        { status: 400 }
+      );
     }
+
     if (password !== passwordConfirm) {
-      return Response.json({ error: "Passwords do not match" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Passwords do not match" },
+        { status: 400 }
+      );
     }
+
     if (password.length < 8) {
-      return Response.json({ error: "Password must be at least 8 characters" }, { status: 400 });
+      return NextResponse.json(
+        { error: "Password must be at least 8 characters" },
+        { status: 400 }
+      );
     }
 
     let role = "USER";
@@ -40,22 +56,82 @@ export async function POST(request) {
     } else {
       const { response } = await requireRole("ADMIN");
       if (response) return response;
-      if (body.role === "ADMIN") role = "ADMIN";
+
+      if (formData.get("role") === "ADMIN") role = "ADMIN";
+    }
+
+    // Photo upload
+    let photoPath = null;
+
+    if (photo && photo.size > 0) {
+      if (typeof photo.arrayBuffer !== "function") {
+        return NextResponse.json(
+          { error: "Invalid photo" },
+          { status: 400 }
+        );
+      }
+
+      const allowedTypes = {
+        "image/jpeg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+      };
+
+      if (!allowedTypes[photo.type]) {
+        return NextResponse.json(
+          { error: "Only JPG, PNG and WEBP images are allowed" },
+          { status: 400 }
+        );
+      }
+
+      if (photo.size > 5 * 1024 * 1024) {
+        return NextResponse.json(
+          { error: "Photo must be less than 5MB" },
+          { status: 400 }
+        );
+      }
+
+      const uploadDir = path.join(process.cwd(), "public", "users");
+
+      await fs.mkdir(uploadDir, { recursive: true });
+
+      const filename = `${crypto.randomUUID()}.${allowedTypes[photo.type]}`;
+
+      const buffer = Buffer.from(await photo.arrayBuffer());
+
+      await fs.writeFile(path.join(uploadDir, filename), buffer);
+
+      photoPath = `/users/${filename}`;
     }
 
     const passwordHash = await bcrypt.hash(password, 12);
 
     const user = await prisma.user.create({
-      data: { name, email, password:passwordHash, role },
+      data: {
+        name,
+        email,
+        password: passwordHash,
+        role,
+        photo: photoPath,
+      },
       omit: { password: true },
     });
 
-    return Response.json(user, { status: 201 });
+    return NextResponse.json(user, { status: 201 });
+
   } catch (error) {
     if (error.code === "P2002") {
-      return Response.json({ error: "Email already exists" }, { status: 409 });
+      return NextResponse.json(
+        { error: "Email already exists" },
+        { status: 409 }
+      );
     }
+
     console.error(error);
-    return Response.json({ error: "Failed to create user" }, { status: 500 });
+
+    return NextResponse.json(
+      { error: "Failed to create user" },
+      { status: 500 }
+    );
   }
 }

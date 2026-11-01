@@ -18,6 +18,7 @@ model User {
   name         String
   email        String   @unique
   password     String
+  photo        String?
   role         Role     @default(USER)
   createdAt    DateTime @default(now())
 }

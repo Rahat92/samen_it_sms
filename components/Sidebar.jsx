@@ -51,7 +51,7 @@ export default function Sidebar() {
       </nav>
 
       <div className="mt-auto px-[18px] pb-5">
-        <p className="text-[8px] text-slate-400">Postal webhooks</p>
+        {/* <p className="text-[8px] text-slate-400">Postal webhooks</p> */}
         <p className="mt-1 font-mono text-[9px] font-bold text-white">
           Asia/Dhaka · UTC+6
         </p>

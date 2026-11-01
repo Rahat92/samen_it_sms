@@ -130,7 +130,7 @@ export default function Shell({ children, currentUser }) {
           ))}
         </nav>
         <div className="side-foot">
-          <span>Postal webhooks</span>
+          {/* <span>Postal webhooks</span> */}
           <span className="mono" style={{ color: "var(--side-on)" }}>Asia/Dhaka · UTC+6</span>
         </div>
       </aside>

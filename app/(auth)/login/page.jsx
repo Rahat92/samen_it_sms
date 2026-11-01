@@ -88,7 +88,7 @@ export default function LoginPage() {
           </div>
         </div>
 
-        <p className="text-xs text-slate-500">Powered by Postal webhooks</p>
+        {/* <p className="text-xs text-slate-500">Powered by Postal webhooks</p> */}
       </aside>
 
       {/* Right: form */}

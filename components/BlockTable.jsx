@@ -1,7 +1,7 @@
 "use client";
 
 import { useDashboard } from "./DashboardProvider";
-import { stamp } from "@/lib/format";
+import { formatDateTime, stamp } from "@/lib/format";
 
 export default function BlockTable({ compact = false }) {
   const { blocked, removeBlock, toast } = useDashboard();
@@ -21,7 +21,7 @@ export default function BlockTable({ compact = false }) {
             <tr key={b.email}>
               <td>{b.email}</td>
               <td className="dim wrap">{b.reason}</td>
-              <td className="dim">{stamp(b.createdAt)}</td>
+              <td className="dim">{formatDateTime(b.createdAt)}</td>
               {!compact && (
                 <td>
                   <button className="btn sm danger" onClick={() => { removeBlock(b.email); toast("Removed from blocklist"); }}>

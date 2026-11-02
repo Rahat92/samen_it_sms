@@ -52,7 +52,8 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   User: 'User',
-  MailEvent: 'MailEvent'
+  MailEvent: 'MailEvent',
+  BlockList: 'BlockList'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -107,6 +108,17 @@ export const MailEventScalarFieldEnum = {
 } as const
 
 export type MailEventScalarFieldEnum = (typeof MailEventScalarFieldEnum)[keyof typeof MailEventScalarFieldEnum]
+
+
+export const BlockListScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  reason: 'reason',
+  domain: 'domain',
+  createdAt: 'createdAt'
+} as const
+
+export type BlockListScalarFieldEnum = (typeof BlockListScalarFieldEnum)[keyof typeof BlockListScalarFieldEnum]
 
 
 export const SortOrder = {

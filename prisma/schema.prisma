@@ -14,14 +14,14 @@ enum Role {
 }
 
 model User {
-  id           Int      @id @default(autoincrement())
-  name         String
-  email        String   @unique
-  password     String
-  photo        String?
-  domain       String?
-  role         Role     @default(USER)
-  createdAt    DateTime @default(now())
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  photo     String?
+  domain    String?
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
 }
 
 model MailEvent {
@@ -48,4 +48,12 @@ model MailEvent {
   @@index([toAddress])
   @@index([occurredAt(sort: Desc)])
   @@index([status, occurredAt(sort: Desc)])
+}
+
+model BlockList {
+  id        Int      @id @default(autoincrement())
+  email     String    @unique
+  reason    String?
+  domain    String?
+  createdAt DateTime @default(now())
 }

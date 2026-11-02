@@ -398,7 +398,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 
 export const ModelName = {
   User: 'User',
-  MailEvent: 'MailEvent'
+  MailEvent: 'MailEvent',
+  BlockList: 'BlockList'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -414,7 +415,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "mailEvent"
+    modelProps: "user" | "mailEvent" | "blockList"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -566,6 +567,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    BlockList: {
+      payload: Prisma.$BlockListPayload<ExtArgs>
+      fields: Prisma.BlockListFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.BlockListFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BlockListPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.BlockListFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BlockListPayload>
+        }
+        findFirst: {
+          args: Prisma.BlockListFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BlockListPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.BlockListFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BlockListPayload>
+        }
+        findMany: {
+          args: Prisma.BlockListFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BlockListPayload>[]
+        }
+        create: {
+          args: Prisma.BlockListCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BlockListPayload>
+        }
+        createMany: {
+          args: Prisma.BlockListCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.BlockListCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BlockListPayload>[]
+        }
+        delete: {
+          args: Prisma.BlockListDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BlockListPayload>
+        }
+        update: {
+          args: Prisma.BlockListUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BlockListPayload>
+        }
+        deleteMany: {
+          args: Prisma.BlockListDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.BlockListUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.BlockListUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BlockListPayload>[]
+        }
+        upsert: {
+          args: Prisma.BlockListUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$BlockListPayload>
+        }
+        aggregate: {
+          args: Prisma.BlockListAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateBlockList>
+        }
+        groupBy: {
+          args: Prisma.BlockListGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BlockListGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.BlockListCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.BlockListCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -641,6 +716,17 @@ export const MailEventScalarFieldEnum = {
 } as const
 
 export type MailEventScalarFieldEnum = (typeof MailEventScalarFieldEnum)[keyof typeof MailEventScalarFieldEnum]
+
+
+export const BlockListScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  reason: 'reason',
+  domain: 'domain',
+  createdAt: 'createdAt'
+} as const
+
+export type BlockListScalarFieldEnum = (typeof BlockListScalarFieldEnum)[keyof typeof BlockListScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -932,6 +1018,7 @@ export type PrismaClientOptions = PrismaClientOptionsWithAccelerateUrl | PrismaC
 export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   mailEvent?: Prisma.MailEventOmit
+  blockList?: Prisma.BlockListOmit
 }
 
 /* Types for Logging */

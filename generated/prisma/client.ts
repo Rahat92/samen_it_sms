@@ -51,3 +51,8 @@ export type User = Prisma.UserModel
  * 
  */
 export type MailEvent = Prisma.MailEventModel
+/**
+ * Model BlockList
+ * 
+ */
+export type BlockList = Prisma.BlockListModel

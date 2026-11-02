@@ -5,7 +5,6 @@ import { formatDateTime, stamp } from "@/lib/format";
 
 export default function BlockTable({ compact = false }) {
   const { blocked, removeBlock, toast } = useDashboard();
-  console.log("Blocked recipients:", blocked?.data);
   if (!blocked?.data?.length) {
     return <div className="empty">No blocked recipients yet. Add an address above, or block one from a failed transaction.</div>;
   }

@@ -85,7 +85,6 @@ export default function BlocklistView() {
       }
 
       // 3. Update the UI only after the server confirms.
-      addBlock(value, "Added manually");
       setEmail("");
       await Swal.fire({
         icon: "success",
@@ -141,7 +140,7 @@ export default function BlocklistView() {
         </div>
       </section>
 
-      <div className="grid-2">
+      <div className="grid-1">
         <section className="card">
           <header>
             <div>
@@ -151,7 +150,7 @@ export default function BlocklistView() {
           </header>
           <BlockTable />
         </section>
-        <section className="card">
+        <section style = {{ display: 'none' }} className="card">
           <header>
             <div>
               <h2>Blocked history</h2>

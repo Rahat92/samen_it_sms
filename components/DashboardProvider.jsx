@@ -47,8 +47,9 @@ export function DashboardProvider({ children }) {
   }, []);
 
   useEffect(() => () => clearTimeout(toastTimer.current), []);
+  console.log("Blocked recipients in provider:", blocked);
   const isBlocked = useCallback(
-    (email) => blocked.some((b) => b.email.toLowerCase() === email.toLowerCase()),
+    (email) => blocked?.data?.some((b) => b.email.toLowerCase() === email.toLowerCase()),
     [blocked]
   );
 

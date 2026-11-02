@@ -7,6 +7,21 @@ import { addDays } from "./Daterangepicker";
 const fmt = (d) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
 const Ctx = createContext(null);
 export function DashboardProvider({ children }) {
+  const [blocked, setBlocked] = useState([]);
+  useEffect(() => {
+    const fetchBlocked = async () => {
+      try {
+        const res = await fetch("/api/blocklist");
+        if (!res.ok) throw new Error("Failed to fetch blocklist");
+        const data = await res.json();
+        console.log("Fetched blocklist:", data);
+        setBlocked(data);
+      } catch (err) {
+        console.error(err);
+      }
+    };
+    fetchBlocked();
+  }, [])
   const today = fmt(new Date());
   const [range, setRange] = useState('');
   const [total, setTotal] = useState(null);
@@ -14,7 +29,6 @@ export function DashboardProvider({ children }) {
   const [rows, setRows] = useState([]);
   const [graphRows, setGraphRows] = useState([]);
   const [tenant, setTenant] = useState("all");
-  const [blocked, setBlocked] = useState(INITIAL_BLOCKED);
   const [history, setHistory] = useState(INITIAL_HISTORY);
   const [selectedId, setSelectedId] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
@@ -61,7 +75,7 @@ export function DashboardProvider({ children }) {
   );
 
   const value = {
-    rows, setRows, graphRows, setGraphRows, q, setQ, total, setTotal,customRange, setCustomRange,
+    rows, setRows, graphRows, setGraphRows, q, setQ, total, setTotal, customRange, setCustomRange,
     range, setRange, tenant, setTenant, scoped,
     blocked, history, isBlocked, addBlock, removeBlock,
     selectedId, openEvent: setSelectedId, closeEvent: () => setSelectedId(null),

@@ -15,7 +15,7 @@ const STATUS = {
 const canAccept = (status) => status === "PENDING" || status === "REJECTED";
 
 export default function BlockTable({ compact = false }) {
-  const { blocked, removeBlock, toast, setBlocked } = useDashboard();
+  const { blocked, removeBlock, toast, setBlocked, currentUser } = useDashboard();
   const updateBlockStatus = useCallback((id, status) => {
     setBlocked((prev) => ({
       ...prev,
@@ -155,7 +155,7 @@ export default function BlockTable({ compact = false }) {
                       >
                         Edit status
                       </button>
-                      {b.status !== "REJECTED" && (
+                      {b.status == "PENDING" && (
                         <button
                           type="button"
                           className="btn sm danger"
@@ -163,7 +163,7 @@ export default function BlockTable({ compact = false }) {
                           onClick={() => handleRemove(b.id)}
                           aria-label={`Remove ${b.email} from blocklist`}
                         >
-                          Remove
+                          Reject
                         </button>
                       )}
                     </div>

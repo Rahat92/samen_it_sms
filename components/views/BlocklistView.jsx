@@ -9,8 +9,15 @@ import { stamp } from "@/lib/format";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REQUEST_TIMEOUT_MS = 10000;
 
+// Add new reasons here; the select and validation both read from this list.
+const REASONS = [
+  { value: "spam", label: "Spam" },
+  { value: "abuse", label: "Abuse" },
+];
+
 const MESSAGES = {
   invalid: "Enter a full email address, like name@example.com.",
+  reasonRequired: "Select a reason for blocking this address.",
   duplicate: "That address is already on the blocklist.",
   network: "We couldn't reach the server. Check your connection and try again.",
   timeout: "The request timed out. Please try again.",
@@ -41,8 +48,9 @@ function messageForStatus(status) {
 }
 
 export default function BlocklistView() {
-  const { blocked, history, isBlocked, addBlock, toast } = useDashboard();
+  const { blocked, history, isBlocked, toast } = useDashboard();
   const [email, setEmail] = useState("");
+  const [reason, setReason] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const inFlight = useRef(false); // guards against double submits before state updates
@@ -54,6 +62,7 @@ export default function BlocklistView() {
     // 1. Validate locally before touching the network.
     const value = email.trim();
     if (!EMAIL.test(value)) return setError(MESSAGES.invalid);
+    if (!REASONS.some((r) => r.value === reason)) return setError(MESSAGES.reasonRequired);
     if (isBlocked(value)) return setError(MESSAGES.duplicate);
 
     inFlight.current = true;
@@ -68,7 +77,7 @@ export default function BlocklistView() {
       const response = await fetch("/api/blocklist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: value }),
+        body: JSON.stringify({ email: value, reason }),
         signal: controller.signal,
       });
 
@@ -84,8 +93,9 @@ export default function BlocklistView() {
         return;
       }
 
-      // 3. Update the UI only after the server confirms.
+      // 3. Reset the form only after the server confirms.
       setEmail("");
+      setReason("");
       await Swal.fire({
         icon: "success",
         title: "Recipient blocked",
@@ -132,6 +142,31 @@ export default function BlocklistView() {
                 if (error) setError("");
               }}
             />
+
+            <label htmlFor="blockReason" className="sr-only">Reason</label>
+            <div className="select-wrap">
+              <select
+                id="blockReason"
+                className="select-modern"
+                value={reason}
+                disabled={submitting}
+                data-empty={reason === ""}
+                aria-describedby={error ? "blockEmailError" : undefined}
+                onChange={(e) => {
+                  setReason(e.target.value);
+                  if (error) setError("");
+                }}
+              >
+                <option value="">Select reason</option>
+                {REASONS.map((r) => (
+                  <option key={r.value} value={r.value}>{r.label}</option>
+                ))}
+              </select>
+              <svg className="select-chevron" viewBox="0 0 20 20" aria-hidden="true">
+                <path d="M5.5 7.5 10 12l4.5-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+
             <button className="btn primary" type="submit" disabled={submitting}>
               {submitting ? "Blocking…" : "Block address"}
             </button>
@@ -145,12 +180,12 @@ export default function BlocklistView() {
           <header>
             <div>
               <h2>Blocked recipients</h2>
-              <p className="hint">{blocked?.data?.length} in total</p>
+              <p className="hint">{blocked?.data?.length ?? 0} in total</p>
             </div>
           </header>
           <BlockTable />
         </section>
-        <section style = {{ display: 'none' }} className="card">
+        <section style={{ display: "none" }} className="card">
           <header>
             <div>
               <h2>Blocked history</h2>

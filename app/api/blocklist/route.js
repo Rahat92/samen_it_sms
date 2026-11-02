@@ -17,6 +17,7 @@ export async function POST(request) {
             data: {
                 email: data.email,
                 reason: data.reason ? data.reason : "Manually added to blocklist",
+                domain: data.domain? data.domain : null
             },
         });
         return NextResponse.json({ message: "Blocklist data received", data });

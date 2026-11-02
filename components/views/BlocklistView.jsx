@@ -15,9 +15,17 @@ const REASONS = [
   { value: "abuse", label: "Abuse" },
 ];
 
+// TODO: replace these placeholders with your real domains.
+const DOMAINS = [
+  { value: "mail.example.com", label: "mail.example.com" },
+  { value: "news.example.com", label: "news.example.com" },
+  { value: "support.example.com", label: "support.example.com" },
+];
+
 const MESSAGES = {
   invalid: "Enter a full email address, like name@example.com.",
   reasonRequired: "Select a reason for blocking this address.",
+  domainRequired: "Select a domain for this block.",
   duplicate: "That address is already on the blocklist.",
   network: "We couldn't reach the server. Check your connection and try again.",
   timeout: "The request timed out. Please try again.",
@@ -47,13 +55,44 @@ function messageForStatus(status) {
   return MESSAGES.generic;
 }
 
+// Reusable styled select so reason and domain stay identical.
+function SelectField({ id, label, placeholder, value, options, disabled, describedBy, onChange }) {
+  return (
+    <>
+      <label htmlFor={id} className="sr-only">{label}</label>
+      <div className="select-wrap">
+        <select
+          id={id}
+          className="select-modern"
+          value={value}
+          disabled={disabled}
+          data-empty={value === ""}
+          aria-describedby={describedBy}
+          onChange={(e) => onChange(e.target.value)}
+        >
+          <option value="">{placeholder}</option>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        <svg className="select-chevron" viewBox="0 0 20 20" aria-hidden="true">
+          <path d="M5.5 7.5 10 12l4.5-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </div>
+    </>
+  );
+}
+
 export default function BlocklistView() {
   const { blocked, history, isBlocked, toast } = useDashboard();
   const [email, setEmail] = useState("");
   const [reason, setReason] = useState("");
+  const [domain, setDomain] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const inFlight = useRef(false); // guards against double submits before state updates
+
+  const errorId = error ? "blockEmailError" : undefined;
 
   async function submit(e) {
     e.preventDefault();
@@ -63,6 +102,7 @@ export default function BlocklistView() {
     const value = email.trim();
     if (!EMAIL.test(value)) return setError(MESSAGES.invalid);
     if (!REASONS.some((r) => r.value === reason)) return setError(MESSAGES.reasonRequired);
+    if (!DOMAINS.some((d) => d.value === domain)) return setError(MESSAGES.domainRequired);
     if (isBlocked(value)) return setError(MESSAGES.duplicate);
 
     inFlight.current = true;
@@ -77,7 +117,7 @@ export default function BlocklistView() {
       const response = await fetch("/api/blocklist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: value, reason }),
+        body: JSON.stringify({ email: value, reason, domain }),
         signal: controller.signal,
       });
 
@@ -96,6 +136,7 @@ export default function BlocklistView() {
       // 3. Reset the form only after the server confirms.
       setEmail("");
       setReason("");
+      setDomain("");
       await Swal.fire({
         icon: "success",
         title: "Recipient blocked",
@@ -114,6 +155,8 @@ export default function BlocklistView() {
       setSubmitting(false);
     }
   }
+
+  const clearError = () => error && setError("");
 
   return (
     <>
@@ -136,36 +179,40 @@ export default function BlocklistView() {
               value={email}
               disabled={submitting}
               aria-invalid={Boolean(error)}
-              aria-describedby={error ? "blockEmailError" : undefined}
+              aria-describedby={errorId}
               onChange={(e) => {
                 setEmail(e.target.value);
-                if (error) setError("");
+                clearError();
               }}
             />
 
-            <label htmlFor="blockReason" className="sr-only">Reason</label>
-            <div className="select-wrap">
-              <select
-                id="blockReason"
-                className="select-modern"
-                value={reason}
-                disabled={submitting}
-                data-empty={reason === ""}
-                aria-describedby={error ? "blockEmailError" : undefined}
-                onChange={(e) => {
-                  setReason(e.target.value);
-                  if (error) setError("");
-                }}
-              >
-                <option value="">Select reason</option>
-                {REASONS.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
-              <svg className="select-chevron" viewBox="0 0 20 20" aria-hidden="true">
-                <path d="M5.5 7.5 10 12l4.5-4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <SelectField
+              id="blockReason"
+              label="Reason"
+              placeholder="Select reason"
+              value={reason}
+              options={REASONS}
+              disabled={submitting}
+              describedBy={errorId}
+              onChange={(v) => {
+                setReason(v);
+                clearError();
+              }}
+            />
+
+            <SelectField
+              id="blockDomain"
+              label="Domain"
+              placeholder="Select domain"
+              value={domain}
+              options={DOMAINS}
+              disabled={submitting}
+              describedBy={errorId}
+              onChange={(v) => {
+                setDomain(v);
+                clearError();
+              }}
+            />
 
             <button className="btn primary" type="submit" disabled={submitting}>
               {submitting ? "Blocking…" : "Block address"}

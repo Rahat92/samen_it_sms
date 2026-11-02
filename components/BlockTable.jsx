@@ -110,6 +110,7 @@ export default function BlockTable({ compact = false }) {
         <thead>
           <tr>
             <th>Email</th>
+            <th>Domain</th>
             <th>Reason</th>
             <th>Added</th>
             <th>Status</th>
@@ -124,6 +125,7 @@ export default function BlockTable({ compact = false }) {
             return (
               <tr key={b.id}>
                 <td>{b.email}</td>
+                <td className="dim">{b.domain ?? "—"}</td>
                 <td className="dim wrap">{b.reason}</td>
                 <td className="dim">{formatDateTime(b.createdAt)}</td>
                 <td className="dim">

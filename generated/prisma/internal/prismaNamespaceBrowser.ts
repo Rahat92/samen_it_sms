@@ -115,6 +115,7 @@ export const BlockListScalarFieldEnum = {
   email: 'email',
   reason: 'reason',
   domain: 'domain',
+  status: 'status',
   createdAt: 'createdAt'
 } as const
 

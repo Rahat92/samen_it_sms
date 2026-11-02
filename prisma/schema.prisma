@@ -12,6 +12,11 @@ enum Role {
   ADMIN
   USER
 }
+enum BlockStatus {
+  PENDING
+  REJECTED
+  APPROVED
+}
 
 model User {
   id        Int      @id @default(autoincrement())
@@ -55,5 +60,6 @@ model BlockList {
   email     String    @unique
   reason    String?
   domain    String?
+  status    BlockStatus @default(PENDING)
   createdAt DateTime @default(now())
 }

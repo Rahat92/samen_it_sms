@@ -145,7 +145,7 @@ export default function BlocklistView() {
           <header>
             <div>
               <h2>Blocked recipients</h2>
-              <p className="hint">{blocked.length} in total</p>
+              <p className="hint">{blocked?.data?.length} in total</p>
             </div>
           </header>
           <BlockTable />

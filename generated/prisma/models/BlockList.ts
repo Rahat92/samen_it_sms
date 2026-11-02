@@ -39,6 +39,7 @@ export type BlockListMinAggregateOutputType = {
   email: string | null
   reason: string | null
   domain: string | null
+  status: $Enums.BlockStatus | null
   createdAt: Date | null
 }
 
@@ -47,6 +48,7 @@ export type BlockListMaxAggregateOutputType = {
   email: string | null
   reason: string | null
   domain: string | null
+  status: $Enums.BlockStatus | null
   createdAt: Date | null
 }
 
@@ -55,6 +57,7 @@ export type BlockListCountAggregateOutputType = {
   email: number
   reason: number
   domain: number
+  status: number
   createdAt: number
   _all: number
 }
@@ -73,6 +76,7 @@ export type BlockListMinAggregateInputType = {
   email?: true
   reason?: true
   domain?: true
+  status?: true
   createdAt?: true
 }
 
@@ -81,6 +85,7 @@ export type BlockListMaxAggregateInputType = {
   email?: true
   reason?: true
   domain?: true
+  status?: true
   createdAt?: true
 }
 
@@ -89,6 +94,7 @@ export type BlockListCountAggregateInputType = {
   email?: true
   reason?: true
   domain?: true
+  status?: true
   createdAt?: true
   _all?: true
 }
@@ -184,6 +190,7 @@ export type BlockListGroupByOutputType = {
   email: string
   reason: string | null
   domain: string | null
+  status: $Enums.BlockStatus
   createdAt: Date
   _count: BlockListCountAggregateOutputType | null
   _avg: BlockListAvgAggregateOutputType | null
@@ -215,6 +222,7 @@ export type BlockListWhereInput = {
   email?: Prisma.StringFilter<"BlockList"> | string
   reason?: Prisma.StringNullableFilter<"BlockList"> | string | null
   domain?: Prisma.StringNullableFilter<"BlockList"> | string | null
+  status?: Prisma.EnumBlockStatusFilter<"BlockList"> | $Enums.BlockStatus
   createdAt?: Prisma.DateTimeFilter<"BlockList"> | Date | string
 }
 
@@ -223,6 +231,7 @@ export type BlockListOrderByWithRelationInput = {
   email?: Prisma.SortOrder
   reason?: Prisma.SortOrderInput | Prisma.SortOrder
   domain?: Prisma.SortOrderInput | Prisma.SortOrder
+  status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -234,6 +243,7 @@ export type BlockListWhereUniqueInput = Prisma.AtLeast<{
   NOT?: Prisma.BlockListWhereInput | Prisma.BlockListWhereInput[]
   reason?: Prisma.StringNullableFilter<"BlockList"> | string | null
   domain?: Prisma.StringNullableFilter<"BlockList"> | string | null
+  status?: Prisma.EnumBlockStatusFilter<"BlockList"> | $Enums.BlockStatus
   createdAt?: Prisma.DateTimeFilter<"BlockList"> | Date | string
 }, "id" | "email">
 
@@ -242,6 +252,7 @@ export type BlockListOrderByWithAggregationInput = {
   email?: Prisma.SortOrder
   reason?: Prisma.SortOrderInput | Prisma.SortOrder
   domain?: Prisma.SortOrderInput | Prisma.SortOrder
+  status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   _count?: Prisma.BlockListCountOrderByAggregateInput
   _avg?: Prisma.BlockListAvgOrderByAggregateInput
@@ -258,6 +269,7 @@ export type BlockListScalarWhereWithAggregatesInput = {
   email?: Prisma.StringWithAggregatesFilter<"BlockList"> | string
   reason?: Prisma.StringNullableWithAggregatesFilter<"BlockList"> | string | null
   domain?: Prisma.StringNullableWithAggregatesFilter<"BlockList"> | string | null
+  status?: Prisma.EnumBlockStatusWithAggregatesFilter<"BlockList"> | $Enums.BlockStatus
   createdAt?: Prisma.DateTimeWithAggregatesFilter<"BlockList"> | Date | string
 }
 
@@ -265,6 +277,7 @@ export type BlockListCreateInput = {
   email: string
   reason?: string | null
   domain?: string | null
+  status?: $Enums.BlockStatus
   createdAt?: Date | string
 }
 
@@ -273,6 +286,7 @@ export type BlockListUncheckedCreateInput = {
   email: string
   reason?: string | null
   domain?: string | null
+  status?: $Enums.BlockStatus
   createdAt?: Date | string
 }
 
@@ -280,6 +294,7 @@ export type BlockListUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumBlockStatusFieldUpdateOperationsInput | $Enums.BlockStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -288,6 +303,7 @@ export type BlockListUncheckedUpdateInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumBlockStatusFieldUpdateOperationsInput | $Enums.BlockStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -296,6 +312,7 @@ export type BlockListCreateManyInput = {
   email: string
   reason?: string | null
   domain?: string | null
+  status?: $Enums.BlockStatus
   createdAt?: Date | string
 }
 
@@ -303,6 +320,7 @@ export type BlockListUpdateManyMutationInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumBlockStatusFieldUpdateOperationsInput | $Enums.BlockStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -311,6 +329,7 @@ export type BlockListUncheckedUpdateManyInput = {
   email?: Prisma.StringFieldUpdateOperationsInput | string
   reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
   domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumBlockStatusFieldUpdateOperationsInput | $Enums.BlockStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
 }
 
@@ -319,6 +338,7 @@ export type BlockListCountOrderByAggregateInput = {
   email?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   domain?: Prisma.SortOrder
+  status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -331,6 +351,7 @@ export type BlockListMaxOrderByAggregateInput = {
   email?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   domain?: Prisma.SortOrder
+  status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
@@ -339,11 +360,16 @@ export type BlockListMinOrderByAggregateInput = {
   email?: Prisma.SortOrder
   reason?: Prisma.SortOrder
   domain?: Prisma.SortOrder
+  status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
 }
 
 export type BlockListSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
+}
+
+export type EnumBlockStatusFieldUpdateOperationsInput = {
+  set?: $Enums.BlockStatus
 }
 
 
@@ -353,6 +379,7 @@ export type BlockListSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   email?: boolean
   reason?: boolean
   domain?: boolean
+  status?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["blockList"]>
 
@@ -361,6 +388,7 @@ export type BlockListSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Ext
   email?: boolean
   reason?: boolean
   domain?: boolean
+  status?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["blockList"]>
 
@@ -369,6 +397,7 @@ export type BlockListSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   email?: boolean
   reason?: boolean
   domain?: boolean
+  status?: boolean
   createdAt?: boolean
 }, ExtArgs["result"]["blockList"]>
 
@@ -377,10 +406,11 @@ export type BlockListSelectScalar = {
   email?: boolean
   reason?: boolean
   domain?: boolean
+  status?: boolean
   createdAt?: boolean
 }
 
-export type BlockListOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "reason" | "domain" | "createdAt", ExtArgs["result"]["blockList"]>
+export type BlockListOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "reason" | "domain" | "status" | "createdAt", ExtArgs["result"]["blockList"]>
 
 export type $BlockListPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "BlockList"
@@ -390,6 +420,7 @@ export type $BlockListPayload<ExtArgs extends runtime.Types.Extensions.InternalA
     email: string
     reason: string | null
     domain: string | null
+    status: $Enums.BlockStatus
     createdAt: Date
   }, ExtArgs["result"]["blockList"]>
   composites: {}
@@ -818,6 +849,7 @@ export interface BlockListFieldRefs {
   readonly email: Prisma.FieldRef<"BlockList", 'String'>
   readonly reason: Prisma.FieldRef<"BlockList", 'String'>
   readonly domain: Prisma.FieldRef<"BlockList", 'String'>
+  readonly status: Prisma.FieldRef<"BlockList", 'BlockStatus'>
   readonly createdAt: Prisma.FieldRef<"BlockList", 'DateTime'>
 }
     

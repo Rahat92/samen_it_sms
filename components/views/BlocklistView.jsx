@@ -13,7 +13,10 @@ const REQUEST_TIMEOUT_MS = 10000;
 const REASONS = [
   { value: "spam", label: "Spam" },
   { value: "abuse", label: "Abuse" },
+  { value: "other", label: "Other" },
 ];
+
+const MAX_CUSTOM_REASON = 100;
 
 // TODO: replace these placeholders with your real domains.
 const DOMAINS = [
@@ -25,6 +28,7 @@ const DOMAINS = [
 const MESSAGES = {
   invalid: "Enter a full email address, like name@example.com.",
   reasonRequired: "Select a reason for blocking this address.",
+  customReasonTooLong: `Keep the reason under ${MAX_CUSTOM_REASON} characters.`,
   domainRequired: "Select a domain for this block.",
   duplicate: "That address is already on the blocklist.",
   network: "We couldn't reach the server. Check your connection and try again.",
@@ -87,6 +91,7 @@ export default function BlocklistView() {
   const { blocked, history, isBlocked, toast } = useDashboard();
   const [email, setEmail] = useState("");
   const [reason, setReason] = useState("");
+  const [customReason, setCustomReason] = useState("");
   const [domain, setDomain] = useState("");
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -102,6 +107,15 @@ export default function BlocklistView() {
     const value = email.trim();
     if (!EMAIL.test(value)) return setError(MESSAGES.invalid);
     if (!REASONS.some((r) => r.value === reason)) return setError(MESSAGES.reasonRequired);
+
+    const detail = customReason.trim();
+    if (reason === "other" && detail.length > MAX_CUSTOM_REASON) {
+      return setError(MESSAGES.customReasonTooLong);
+    }
+
+    // "Other" sends the typed text, or the literal "Other" when the field is empty.
+    const reasonToSend = reason === "other" ? detail || "Other" : reason;
+
     if (!DOMAINS.some((d) => d.value === domain)) return setError(MESSAGES.domainRequired);
     if (isBlocked(value)) return setError(MESSAGES.duplicate);
 
@@ -117,7 +131,11 @@ export default function BlocklistView() {
       const response = await fetch("/api/blocklist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: value, reason, domain }),
+        body: JSON.stringify({
+          email: value,
+          reason: reasonToSend,
+          domain,
+        }),
         signal: controller.signal,
       });
 
@@ -136,6 +154,7 @@ export default function BlocklistView() {
       // 3. Reset the form only after the server confirms.
       setEmail("");
       setReason("");
+      setCustomReason("");
       setDomain("");
       await Swal.fire({
         icon: "success",
@@ -196,9 +215,34 @@ export default function BlocklistView() {
               describedBy={errorId}
               onChange={(v) => {
                 setReason(v);
+                if (v !== "other") setCustomReason("");
                 clearError();
               }}
             />
+
+            {reason === "other" && (
+              <div className="reason-other">
+                <label htmlFor="blockReasonOther" className="sr-only">Describe the reason</label>
+                <input
+                  id="blockReasonOther"
+                  type="text"
+                  placeholder="Describe the reason (optional)"
+                  autoComplete="off"
+                  autoFocus
+                  maxLength={MAX_CUSTOM_REASON}
+                  value={customReason}
+                  disabled={submitting}
+                  aria-describedby={errorId}
+                  onChange={(e) => {
+                    setCustomReason(e.target.value);
+                    clearError();
+                  }}
+                />
+                {/* <span className="reason-count" aria-hidden="true">
+                  {customReason.length}/{MAX_CUSTOM_REASON}
+                </span> */}
+              </div>
+            )}
 
             <SelectField
               id="blockDomain"

@@ -12,6 +12,10 @@ enum Role {
   ADMIN
   USER
 }
+enum Status {
+  ACTIVE
+  INACTIVE
+}
 enum BlockStatus {
   PENDING
   REJECTED
@@ -22,6 +26,7 @@ model User {
   id        Int      @id @default(autoincrement())
   name      String
   email     String   @unique
+  isActive  Boolean  @default(false)
   password  String
   photo     String?
   domain    String?

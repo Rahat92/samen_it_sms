@@ -161,3 +161,109 @@ export async function PUT(request, { params }) {
     );
   }
 }
+
+// update user status (active/inactive)
+export async function PATCH(request, { params }) {
+  console.log("PATCH request received for user status update");
+  try {
+    const { id } = await params;
+    const userId = Number(id);  
+    await requireRole("ADMIN");
+
+    if (!Number.isInteger(userId) || userId <= 0) {
+      return NextResponse.json(
+        { error: "Invalid user ID" },
+        { status: 400 }
+      );
+    } else {
+      const existingUser = await prisma.user.findUnique({
+        where: { id: userId },
+      });
+      if (!existingUser) {
+        return NextResponse.json(
+          { error: "User not found" },
+          { status: 404 }
+        );
+      }else {
+        const updatedUser = await prisma.user.update({
+          where: { id: userId },
+          data: { isActive: !existingUser.isActive },
+          omit: { password: true },
+        });
+        return NextResponse.json(updatedUser);
+      }
+    }
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Failed to update user status" },
+      { status: 500 }
+    );
+  }
+}
+
+// change user role
+export async function POST(request, { params }) {
+  try {
+    const { id } = await params;
+    const userId = Number(id);
+    await requireRole("ADMIN");
+    const { role } = await request.json();
+    if (!role) {
+      return NextResponse.json(
+        { error: "Role is required" },
+        { status: 400 }
+      );
+    }
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!existingUser) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: { role },
+      omit: { password: true },
+    });
+    return NextResponse.json(updatedUser);
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Failed to change user role" },
+      { status: 500 }
+    );
+  }
+}
+
+// delete user
+export async function DELETE(request, { params }) {
+  try {
+    const { id } = await params;
+    const userId = Number(id);
+    await requireRole("ADMIN");
+    console.log("DELETE request received for user deletion");
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId },
+    });
+    if (!existingUser) {
+      return NextResponse.json(
+        { error: "User not found" },
+        { status: 404 }
+      );
+    }
+    await prisma.user.delete({
+      where: { id: userId },
+    });
+    return NextResponse.json({ message: "User deleted successfully" });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { error: "Failed to delete user" },
+      { status: 500 }
+    );
+  }
+}

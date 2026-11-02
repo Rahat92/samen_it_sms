@@ -13,6 +13,7 @@ const nav = [
   { label: "Failures", icon: AlertIcon, badge: 78 },
   { label: "Transactions", icon: MailIcon },
   { label: "Blocklist", icon: BanIcon },
+  { label: "Tenants", icon: MailIcon },
   { label: "Settings", icon: SlidersIcon },
 ];
 

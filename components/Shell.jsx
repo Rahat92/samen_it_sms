@@ -116,7 +116,7 @@ export default function Shell({ children, currentUser }) {
           <span>Mail Dashboard</span>
         </div>
         <nav style={{ display: "contents" }} aria-label="Sections">
-          {NAV.map((n) => (
+          {NAV.filter((n) => !n.only || n.only.includes(currentUser?.role)).map((n) => (
             <Link
               key={n.href}
               href={n.href}

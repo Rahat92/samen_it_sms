@@ -78,7 +78,7 @@ export function DashboardProvider({ children }) {
   const value = {
     rows, setRows, graphRows, setGraphRows, q, setQ, total, setTotal, customRange, setCustomRange,
     range, setRange, tenant, setTenant, scoped,
-    blocked, history, isBlocked, addBlock, removeBlock,
+    blocked, setBlocked, history, setHistory, isBlocked, addBlock, removeBlock,
     selectedId, openEvent: setSelectedId, closeEvent: () => setSelectedId(null),
     toastMsg, toast, copy,
   };

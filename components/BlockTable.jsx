@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import Swal from "sweetalert2";
 import { useDashboard } from "./DashboardProvider";
 import { formatDateTime } from "@/lib/format";
 
 const STATUS = {
-  PENDING:  { label: "Pending",  tone: "warning" },
+  PENDING: { label: "Pending", tone: "warning" },
   APPROVED: { label: "Approved", tone: "success" },
   REJECTED: { label: "Rejected", tone: "danger" },
 };
@@ -15,28 +15,47 @@ const STATUS = {
 const canAccept = (status) => status === "PENDING" || status === "REJECTED";
 
 export default function BlockTable({ compact = false }) {
-  // Assumes the provider exposes updateBlockStatus(email, status) to update local state.
-  const { blocked, removeBlock, updateBlockStatus, toast } = useDashboard();
-  const [busyEmail, setBusyEmail] = useState(null);
+  const { blocked, removeBlock, toast, setBlocked } = useDashboard();
+  const updateBlockStatus = useCallback((id, status) => {
+    setBlocked((prev) => ({
+      ...prev,
+      data: prev.data.map((b) => (b.id === id ? { ...b, status } : b)),
+    }));
+  }, []);
+  const [busyId, setBusyId] = useState(null);
   const rows = blocked?.data ?? [];
 
-  async function changeStatus(email, status) {
-    if (busyEmail) return;
-    setBusyEmail(email);
+  async function changeStatus(b, status, successMessage) {
+    console.log("Changing status for:", b, "to", status);
+    if (busyId) return;
+    setBusyId(b.id);
     try {
-      const response = await fetch("/api/blocklist", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, status }),
-      });
-      if (!response.ok) throw new Error(`Request failed with status ${response.status}`);
+      let response;
+      try {
+        response = await fetch(`/api/blocklist/${encodeURIComponent(b.id)}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ status }),
+        });
+      } catch {
+        throw new Error("Network error. Check your connection.");
+      }
 
-      updateBlockStatus(email, status);
-      toast(`Status changed to ${STATUS[status].label}`);
-    } catch {
-      toast("Couldn't update status. Please try again.");
+      if (!response.ok) {
+        let message = "Couldn't update status. Please try again.";
+        if (response.status === 404) message = "This recipient no longer exists.";
+        else if (response.status === 401 || response.status === 403) message = "Your session has expired. Please sign in again.";
+        else if (response.status === 429) message = "Too many requests. Please wait a moment.";
+        throw new Error(message);
+      }
+
+      updateBlockStatus(b.id, status);
+      toast(successMessage ?? `Status changed to ${STATUS[status].label}`);
+    } catch (err) {
+      console.error("changeStatus failed:", err);
+      toast(err.message || "Couldn't update status. Please try again.");
     } finally {
-      setBusyEmail(null);
+      setBusyId(null);
     }
   }
 
@@ -58,25 +77,23 @@ export default function BlockTable({ compact = false }) {
       inputValidator: (v) => (v ? undefined : "Please choose a status."),
     });
 
-    if (isConfirmed && value) await changeStatus(b.email, value);
+    if (isConfirmed && value) await changeStatus(b, value);
   }
 
-  async function handleRemove(email) {
+  async function handleRemove(id) {
+    const block = blocked?.data?.find((b) => b.id === id);
+    if (!block) return;
+
     const { isConfirmed } = await Swal.fire({
       icon: "warning",
       title: "Remove from blocklist?",
-      text: `${email} will be able to receive mail again.`,
+      text: `${block.email} will be able to receive mail again.`,
       showCancelButton: true,
       confirmButtonText: "Yes, remove",
     });
     if (!isConfirmed) return;
-
-    try {
-      await removeBlock(email);
-      toast("Removed from blocklist");
-    } catch {
-      toast("Couldn't remove recipient. Please try again.");
-    }
+    console.log("Removing blocklist entry:", block);
+    await changeStatus(block, "REJECTED", "Removed from blocklist");
   }
 
   if (!rows.length) {
@@ -102,10 +119,10 @@ export default function BlockTable({ compact = false }) {
         <tbody>
           {rows.slice(0, compact ? 3 : 50).map((b) => {
             const s = STATUS[b.status] ?? { label: b.status ?? "Unknown", tone: "muted" };
-            const busy = busyEmail === b.email;
+            const busy = busyId === b.id;
 
             return (
-              <tr key={b.email}>
+              <tr key={b.id}>
                 <td>{b.email}</td>
                 <td className="dim wrap">{b.reason}</td>
                 <td className="dim">{formatDateTime(b.createdAt)}</td>
@@ -123,7 +140,7 @@ export default function BlockTable({ compact = false }) {
                           type="button"
                           className="btn sm success"
                           disabled={busy}
-                          onClick={() => changeStatus(b.email, "APPROVED")}
+                          onClick={() => changeStatus(b, "APPROVED")}
                           aria-label={`Accept ${b.email}`}
                         >
                           {busy ? "Saving…" : "Accept"}
@@ -138,15 +155,17 @@ export default function BlockTable({ compact = false }) {
                       >
                         Edit status
                       </button>
-                      <button
-                        type="button"
-                        className="btn sm danger"
-                        disabled={busy}
-                        onClick={() => handleRemove(b.email)}
-                        aria-label={`Remove ${b.email} from blocklist`}
-                      >
-                        Remove
-                      </button>
+                      {b.status !== "REJECTED" && (
+                        <button
+                          type="button"
+                          className="btn sm danger"
+                          disabled={busy}
+                          onClick={() => handleRemove(b.id)}
+                          aria-label={`Remove ${b.email} from blocklist`}
+                        >
+                          Remove
+                        </button>
+                      )}
                     </div>
                   </td>
                 )}

@@ -724,7 +724,8 @@ export const BlockListScalarFieldEnum = {
   reason: 'reason',
   domain: 'domain',
   status: 'status',
-  createdAt: 'createdAt'
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
 } as const
 
 export type BlockListScalarFieldEnum = (typeof BlockListScalarFieldEnum)[keyof typeof BlockListScalarFieldEnum]

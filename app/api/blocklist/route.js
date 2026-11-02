@@ -25,3 +25,9 @@ export async function POST(request) {
         return NextResponse.json({ error: "Failed to add to blocklist" }, { status: 500 });
     }
 }
+
+// DELETE A BLOCKLIST ENTRY
+// export async function DELETE(request) {
+//     await prisma.blockList.deleteMany({});
+//     return NextResponse.json({ message: "All blocklist entries deleted" });
+// }

@@ -1,9 +1,22 @@
 import { prisma } from "@/lib/prisma";
+import { getSession } from "@/lib/session";
 import { NextResponse } from "next/server";
 
 export async function GET(request) {
+    // WANT TO GET SESSION USER AND CHECK IF THEY ARE ADMIN
+    const session = await getSession();
+    console.log('SESSION', session)
     try {
-        const blockList = await prisma.blockList.findMany();
+        let blockList = null;
+        if(session.role !== "ADMIN") {
+            blockList = await prisma.blockList.findMany({
+                where: {
+                    domain: session.domain
+                }
+            });
+        }else {
+            blockList = await prisma.blockList.findMany();
+        }
         return NextResponse.json({ data: blockList });
     } catch (error) {
         console.error("Error fetching blocklist:", error);

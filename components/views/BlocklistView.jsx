@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import BlockTable from "../BlockTable";
 import { useDashboard } from "../DashboardProvider";
@@ -61,6 +61,7 @@ function messageForStatus(status) {
 
 // Reusable styled select so reason and domain stay identical.
 function SelectField({ id, label, placeholder, value, options, disabled, describedBy, onChange }) {
+
   return (
     <>
       <label htmlFor={id} className="sr-only">{label}</label>
@@ -87,7 +88,7 @@ function SelectField({ id, label, placeholder, value, options, disabled, describ
   );
 }
 
-export default function BlocklistView() {
+export default function BlocklistView({ currentUser }) {
   const { blocked, history, isBlocked, toast } = useDashboard();
   const [email, setEmail] = useState("");
   const [reason, setReason] = useState("");
@@ -180,90 +181,94 @@ export default function BlocklistView() {
   return (
     <>
       <section className="card">
-        <header>
-          <div>
-            <h2>Add a recipient</h2>
-            <p className="hint">Mail to this address will not be sent</p>
-          </div>
-        </header>
-        <div className="pad">
-          <form className="formrow" onSubmit={submit} noValidate>
-            <label htmlFor="blockEmail" className="sr-only">Email address</label>
-            <input
-              id="blockEmail"
-              type="text"
-              inputMode="email"
-              placeholder="name@example.com"
-              autoComplete="off"
-              value={email}
-              disabled={submitting}
-              aria-invalid={Boolean(error)}
-              aria-describedby={errorId}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                clearError();
-              }}
-            />
+        {currentUser?.role === "ADMIN" && (
+          <header>
+            <div>
+              <h2>Add a recipient</h2>
+              <p className="hint">Mail to this address will not be sent</p>
+            </div>
+          </header>
+        )}
+        {currentUser?.role === "ADMIN" && (
+          <div className="pad">
+            <form className="formrow" onSubmit={submit} noValidate>
+              <label htmlFor="blockEmail" className="sr-only">Email address</label>
+              <input
+                id="blockEmail"
+                type="text"
+                inputMode="email"
+                placeholder="name@example.com"
+                autoComplete="off"
+                value={email}
+                disabled={submitting}
+                aria-invalid={Boolean(error)}
+                aria-describedby={errorId}
+                onChange={(e) => {
+                  setEmail(e.target.value);
+                  clearError();
+                }}
+              />
 
-            <SelectField
-              id="blockReason"
-              label="Reason"
-              placeholder="Select reason"
-              value={reason}
-              options={REASONS}
-              disabled={submitting}
-              describedBy={errorId}
-              onChange={(v) => {
-                setReason(v);
-                if (v !== "other") setCustomReason("");
-                clearError();
-              }}
-            />
+              <SelectField
+                id="blockReason"
+                label="Reason"
+                placeholder="Select reason"
+                value={reason}
+                options={REASONS}
+                disabled={submitting}
+                describedBy={errorId}
+                onChange={(v) => {
+                  setReason(v);
+                  if (v !== "other") setCustomReason("");
+                  clearError();
+                }}
+              />
 
-            {reason === "other" && (
-              <div className="reason-other">
-                <label htmlFor="blockReasonOther" className="sr-only">Describe the reason</label>
-                <input
-                  id="blockReasonOther"
-                  type="text"
-                  placeholder="Describe the reason (optional)"
-                  autoComplete="off"
-                  autoFocus
-                  maxLength={MAX_CUSTOM_REASON}
-                  value={customReason}
-                  disabled={submitting}
-                  aria-describedby={errorId}
-                  onChange={(e) => {
-                    setCustomReason(e.target.value);
-                    clearError();
-                  }}
-                />
-                {/* <span className="reason-count" aria-hidden="true">
+              {reason === "other" && (
+                <div className="reason-other">
+                  <label htmlFor="blockReasonOther" className="sr-only">Describe the reason</label>
+                  <input
+                    id="blockReasonOther"
+                    type="text"
+                    placeholder="Describe the reason (optional)"
+                    autoComplete="off"
+                    autoFocus
+                    maxLength={MAX_CUSTOM_REASON}
+                    value={customReason}
+                    disabled={submitting}
+                    aria-describedby={errorId}
+                    onChange={(e) => {
+                      setCustomReason(e.target.value);
+                      clearError();
+                    }}
+                  />
+                  {/* <span className="reason-count" aria-hidden="true">
                   {customReason.length}/{MAX_CUSTOM_REASON}
                 </span> */}
-              </div>
-            )}
+                </div>
+              )}
 
-            <SelectField
-              id="blockDomain"
-              label="Domain"
-              placeholder="Select domain"
-              value={domain}
-              options={DOMAINS}
-              disabled={submitting}
-              describedBy={errorId}
-              onChange={(v) => {
-                setDomain(v);
-                clearError();
-              }}
-            />
+              <SelectField
+                id="blockDomain"
+                label="Domain"
+                placeholder="Select domain"
+                value={domain}
+                options={DOMAINS}
+                disabled={submitting}
+                describedBy={errorId}
+                onChange={(v) => {
+                  setDomain(v);
+                  clearError();
+                }}
+              />
 
-            <button className="btn primary" type="submit" disabled={submitting}>
-              {submitting ? "Blocking…" : "Block address"}
-            </button>
-          </form>
-          <p id="blockEmailError" className="err" role="alert">{error}</p>
-        </div>
+              <button className="btn primary" type="submit" disabled={submitting}>
+                {submitting ? "Blocking…" : "Block address"}
+              </button>
+            </form>
+            <p id="blockEmailError" className="err" role="alert">{error}</p>
+          </div>
+        )}
       </section>
 
       <div className="grid-1">

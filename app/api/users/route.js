@@ -6,7 +6,7 @@ import fs from "fs/promises";
 import path from "path";
 export async function GET() {
   const { response } = await requireRole("ADMIN");
-  console.log(response)
+  console.log('RESPONSE', response)
   if (response) return response;
 
   const users = await prisma.user.findMany({

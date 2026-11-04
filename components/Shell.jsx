@@ -24,33 +24,48 @@ export default function Shell({ children, currentUser }) {
     NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href))) ?? NAV[0];
   const badCount = totals(scoped).bad;
 
-  // Pending unblock requests, shown as a badge on the "Unblock Requests" nav item
+  // Nav badge counts
+  //   blockedCount -> "Blocklist" item, shown to admins and users (users: own domain only)
+  //   pendingCount -> "Unblock Requests" item, admins only
+  const [blockedCount, setBlockedCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
 
   useEffect(() => {
     if (!currentUser) return;
     let cancelled = false;
+    const admin = currentUser.role === "ADMIN" || currentUser.role === "SUPERADMIN";
 
-    async function loadPending() {
+    async function getJson(url) {
       try {
-        const res = await fetch("/api/blocklist-requests/pending-counts", { cache: "no-store" });
-        if (!res.ok) return;
-        const result = await res.json();
-        if (!cancelled) setPendingCount(Number(result.count ?? result.data ?? 0) || 0);
+        const res = await fetch(url, { cache: "no-store" });
+        return res.ok ? await res.json() : null;
       } catch {
-        // keep the previous count if the request fails
+        return null; // keep the previous count if the request fails
       }
     }
 
-    loadPending();
-    const timer = setInterval(loadPending, 30000); // refresh every 30s
-    // Lets other components refresh the badge instantly:
+    async function loadCounts() {
+      const [blocked, pending] = await Promise.all([
+        getJson("/api/blocklist/count"),
+        admin ? getJson("/api/blocklist-requests/pending-counts") : Promise.resolve(null),
+      ]);
+      if (cancelled) return;
+      if (blocked) {
+        // entries waiting for review are still blocked
+        setBlockedCount((blocked.blocked ?? 0) + (blocked.unblockRequested ?? 0));
+      }
+      if (pending) setPendingCount(Number(pending.count ?? pending.data ?? 0) || 0);
+    }
+
+    loadCounts();
+    const timer = setInterval(loadCounts, 30000); // refresh every 30s
+    // Lets other components refresh the badges instantly:
     //   window.dispatchEvent(new Event("unblock-requests:changed"))
-    window.addEventListener("unblock-requests:changed", loadPending);
+    window.addEventListener("unblock-requests:changed", loadCounts);
     return () => {
       cancelled = true;
       clearInterval(timer);
-      window.removeEventListener("unblock-requests:changed", loadPending);
+      window.removeEventListener("unblock-requests:changed", loadCounts);
     };
   }, [currentUser]);
 
@@ -156,6 +171,11 @@ export default function Shell({ children, currentUser }) {
               <Icon name={n.icon} />
               <span>{n.label}</span>
               {n.href === "/failures" && badCount > 0 && <span className="count">{badCount}</span>}
+              {n.href === "/blocklist" && blockedCount > 0 && (
+                <span className="count" aria-label={`${blockedCount} blocked`}>
+                  {blockedCount > 99 ? "99+" : blockedCount}
+                </span>
+              )}
               {n.href === "/unblock-requests" && pendingCount > 0 && (
                 <span className="count" aria-label={`${pendingCount} pending requests`}>
                   {pendingCount > 99 ? "99+" : pendingCount}

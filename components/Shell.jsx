@@ -24,6 +24,36 @@ export default function Shell({ children, currentUser }) {
     NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href))) ?? NAV[0];
   const badCount = totals(scoped).bad;
 
+  // Pending unblock requests, shown as a badge on the "Unblock Requests" nav item
+  const [pendingCount, setPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    let cancelled = false;
+
+    async function loadPending() {
+      try {
+        const res = await fetch("/api/blocklist-requests/pending-counts", { cache: "no-store" });
+        if (!res.ok) return;
+        const result = await res.json();
+        if (!cancelled) setPendingCount(Number(result.count ?? result.data ?? 0) || 0);
+      } catch {
+        // keep the previous count if the request fails
+      }
+    }
+
+    loadPending();
+    const timer = setInterval(loadPending, 30000); // refresh every 30s
+    // Lets other components refresh the badge instantly:
+    //   window.dispatchEvent(new Event("unblock-requests:changed"))
+    window.addEventListener("unblock-requests:changed", loadPending);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener("unblock-requests:changed", loadPending);
+    };
+  }, [currentUser]);
+
   const today = fmt(new Date());
   const minDate = addDays(today, -30);
 
@@ -126,6 +156,11 @@ export default function Shell({ children, currentUser }) {
               <Icon name={n.icon} />
               <span>{n.label}</span>
               {n.href === "/failures" && badCount > 0 && <span className="count">{badCount}</span>}
+              {n.href === "/unblock-requests" && pendingCount > 0 && (
+                <span className="count" aria-label={`${pendingCount} pending requests`}>
+                  {pendingCount > 99 ? "99+" : pendingCount}
+                </span>
+              )}
             </Link>
           ))}
         </nav>

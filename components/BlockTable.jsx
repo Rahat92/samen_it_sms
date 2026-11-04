@@ -110,6 +110,7 @@ export default function BlockTable({ compact = false, currentUser }) {
       <table style={{ minWidth: compact ? 420 : 640 }}>
         <thead>
           <tr>
+            <th>Id</th>
             <th>Email</th>
             <th>Domain</th>
             <th>Reason</th>
@@ -125,6 +126,7 @@ export default function BlockTable({ compact = false, currentUser }) {
 
             return (
               <tr key={b.id}>
+                <td>{b.id}</td>
                 <td>{b.email}</td>
                 <td className="dim">{b.domain ?? "—"}</td>
                 <td className="dim wrap">{b.reason}</td>
@@ -163,7 +165,7 @@ export default function BlockTable({ compact = false, currentUser }) {
                           <Icon name="set" />
                           Edit status
                         </button>
-                      ) : (
+                      ) : b.unblockRequest !== null && b.unblockRequest.status === "PENDING" ? (
                         <button
                           type="button"
                           disabled={busy}
@@ -176,6 +178,19 @@ export default function BlockTable({ compact = false, currentUser }) {
                         >
                           <Icon name="unlock" />
                           Request to Unblock
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => requestUnblock(b)} // wire up your handler
+                          aria-label={`Request to unblock ${b.email}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-amber-800 transition
+               active:scale-[0.98]
+               focus:outline-none focus-visible:ring-2"
+                        >
+                          <Icon name="review" />
+                          Admin Review in Progress
                         </button>
                       )}
                       {b.status == "PENDING" && (

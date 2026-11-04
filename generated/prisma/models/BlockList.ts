@@ -232,6 +232,7 @@ export type BlockListWhereInput = {
   status?: Prisma.EnumBlockStatusFilter<"BlockList"> | $Enums.BlockStatus
   createdAt?: Prisma.DateTimeFilter<"BlockList"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"BlockList"> | Date | string
+  unblockRequests?: Prisma.UnblockRequestListRelationFilter
 }
 
 export type BlockListOrderByWithRelationInput = {
@@ -242,6 +243,7 @@ export type BlockListOrderByWithRelationInput = {
   status?: Prisma.SortOrder
   createdAt?: Prisma.SortOrder
   updatedAt?: Prisma.SortOrder
+  unblockRequests?: Prisma.UnblockRequestOrderByRelationAggregateInput
 }
 
 export type BlockListWhereUniqueInput = Prisma.AtLeast<{
@@ -255,6 +257,7 @@ export type BlockListWhereUniqueInput = Prisma.AtLeast<{
   status?: Prisma.EnumBlockStatusFilter<"BlockList"> | $Enums.BlockStatus
   createdAt?: Prisma.DateTimeFilter<"BlockList"> | Date | string
   updatedAt?: Prisma.DateTimeFilter<"BlockList"> | Date | string
+  unblockRequests?: Prisma.UnblockRequestListRelationFilter
 }, "id" | "email">
 
 export type BlockListOrderByWithAggregationInput = {
@@ -292,6 +295,7 @@ export type BlockListCreateInput = {
   status?: $Enums.BlockStatus
   createdAt?: Date | string
   updatedAt?: Date | string
+  unblockRequests?: Prisma.UnblockRequestCreateNestedManyWithoutBlockListInput
 }
 
 export type BlockListUncheckedCreateInput = {
@@ -302,6 +306,7 @@ export type BlockListUncheckedCreateInput = {
   status?: $Enums.BlockStatus
   createdAt?: Date | string
   updatedAt?: Date | string
+  unblockRequests?: Prisma.UnblockRequestUncheckedCreateNestedManyWithoutBlockListInput
 }
 
 export type BlockListUpdateInput = {
@@ -311,6 +316,7 @@ export type BlockListUpdateInput = {
   status?: Prisma.EnumBlockStatusFieldUpdateOperationsInput | $Enums.BlockStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  unblockRequests?: Prisma.UnblockRequestUpdateManyWithoutBlockListNestedInput
 }
 
 export type BlockListUncheckedUpdateInput = {
@@ -321,6 +327,7 @@ export type BlockListUncheckedUpdateInput = {
   status?: Prisma.EnumBlockStatusFieldUpdateOperationsInput | $Enums.BlockStatus
   createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  unblockRequests?: Prisma.UnblockRequestUncheckedUpdateManyWithoutBlockListNestedInput
 }
 
 export type BlockListCreateManyInput = {
@@ -390,10 +397,112 @@ export type BlockListSumOrderByAggregateInput = {
   id?: Prisma.SortOrder
 }
 
+export type BlockListScalarRelationFilter = {
+  is?: Prisma.BlockListWhereInput
+  isNot?: Prisma.BlockListWhereInput
+}
+
 export type EnumBlockStatusFieldUpdateOperationsInput = {
   set?: $Enums.BlockStatus
 }
 
+export type BlockListCreateNestedOneWithoutUnblockRequestsInput = {
+  create?: Prisma.XOR<Prisma.BlockListCreateWithoutUnblockRequestsInput, Prisma.BlockListUncheckedCreateWithoutUnblockRequestsInput>
+  connectOrCreate?: Prisma.BlockListCreateOrConnectWithoutUnblockRequestsInput
+  connect?: Prisma.BlockListWhereUniqueInput
+}
+
+export type BlockListUpdateOneRequiredWithoutUnblockRequestsNestedInput = {
+  create?: Prisma.XOR<Prisma.BlockListCreateWithoutUnblockRequestsInput, Prisma.BlockListUncheckedCreateWithoutUnblockRequestsInput>
+  connectOrCreate?: Prisma.BlockListCreateOrConnectWithoutUnblockRequestsInput
+  upsert?: Prisma.BlockListUpsertWithoutUnblockRequestsInput
+  connect?: Prisma.BlockListWhereUniqueInput
+  update?: Prisma.XOR<Prisma.XOR<Prisma.BlockListUpdateToOneWithWhereWithoutUnblockRequestsInput, Prisma.BlockListUpdateWithoutUnblockRequestsInput>, Prisma.BlockListUncheckedUpdateWithoutUnblockRequestsInput>
+}
+
+export type BlockListCreateWithoutUnblockRequestsInput = {
+  email: string
+  reason?: string | null
+  domain?: string | null
+  status?: $Enums.BlockStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type BlockListUncheckedCreateWithoutUnblockRequestsInput = {
+  id?: number
+  email: string
+  reason?: string | null
+  domain?: string | null
+  status?: $Enums.BlockStatus
+  createdAt?: Date | string
+  updatedAt?: Date | string
+}
+
+export type BlockListCreateOrConnectWithoutUnblockRequestsInput = {
+  where: Prisma.BlockListWhereUniqueInput
+  create: Prisma.XOR<Prisma.BlockListCreateWithoutUnblockRequestsInput, Prisma.BlockListUncheckedCreateWithoutUnblockRequestsInput>
+}
+
+export type BlockListUpsertWithoutUnblockRequestsInput = {
+  update: Prisma.XOR<Prisma.BlockListUpdateWithoutUnblockRequestsInput, Prisma.BlockListUncheckedUpdateWithoutUnblockRequestsInput>
+  create: Prisma.XOR<Prisma.BlockListCreateWithoutUnblockRequestsInput, Prisma.BlockListUncheckedCreateWithoutUnblockRequestsInput>
+  where?: Prisma.BlockListWhereInput
+}
+
+export type BlockListUpdateToOneWithWhereWithoutUnblockRequestsInput = {
+  where?: Prisma.BlockListWhereInput
+  data: Prisma.XOR<Prisma.BlockListUpdateWithoutUnblockRequestsInput, Prisma.BlockListUncheckedUpdateWithoutUnblockRequestsInput>
+}
+
+export type BlockListUpdateWithoutUnblockRequestsInput = {
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumBlockStatusFieldUpdateOperationsInput | $Enums.BlockStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+export type BlockListUncheckedUpdateWithoutUnblockRequestsInput = {
+  id?: Prisma.IntFieldUpdateOperationsInput | number
+  email?: Prisma.StringFieldUpdateOperationsInput | string
+  reason?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  domain?: Prisma.NullableStringFieldUpdateOperationsInput | string | null
+  status?: Prisma.EnumBlockStatusFieldUpdateOperationsInput | $Enums.BlockStatus
+  createdAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  updatedAt?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+}
+
+
+/**
+ * Count Type BlockListCountOutputType
+ */
+
+export type BlockListCountOutputType = {
+  unblockRequests: number
+}
+
+export type BlockListCountOutputTypeSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  unblockRequests?: boolean | BlockListCountOutputTypeCountUnblockRequestsArgs
+}
+
+/**
+ * BlockListCountOutputType without action
+ */
+export type BlockListCountOutputTypeDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the BlockListCountOutputType
+   */
+  select?: Prisma.BlockListCountOutputTypeSelect<ExtArgs> | null
+}
+
+/**
+ * BlockListCountOutputType without action
+ */
+export type BlockListCountOutputTypeCountUnblockRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  where?: Prisma.UnblockRequestWhereInput
+}
 
 
 export type BlockListSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -404,6 +513,8 @@ export type BlockListSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   status?: boolean
   createdAt?: boolean
   updatedAt?: boolean
+  unblockRequests?: boolean | Prisma.BlockList$unblockRequestsArgs<ExtArgs>
+  _count?: boolean | Prisma.BlockListCountOutputTypeDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["blockList"]>
 
 export type BlockListSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -437,10 +548,18 @@ export type BlockListSelectScalar = {
 }
 
 export type BlockListOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "reason" | "domain" | "status" | "createdAt" | "updatedAt", ExtArgs["result"]["blockList"]>
+export type BlockListInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  unblockRequests?: boolean | Prisma.BlockList$unblockRequestsArgs<ExtArgs>
+  _count?: boolean | Prisma.BlockListCountOutputTypeDefaultArgs<ExtArgs>
+}
+export type BlockListIncludeCreateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
+export type BlockListIncludeUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {}
 
 export type $BlockListPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   name: "BlockList"
-  objects: {}
+  objects: {
+    unblockRequests: Prisma.$UnblockRequestPayload<ExtArgs>[]
+  }
   scalars: runtime.Types.Extensions.GetPayloadResult<{
     id: number
     email: string
@@ -843,6 +962,7 @@ readonly fields: BlockListFieldRefs;
  */
 export interface Prisma__BlockListClient<T, Null = never, ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs, GlobalOmitOptions = {}> extends Prisma.PrismaPromise<T> {
   readonly [Symbol.toStringTag]: "PrismaPromise"
+  unblockRequests<T extends Prisma.BlockList$unblockRequestsArgs<ExtArgs> = {}>(args?: Prisma.Subset<T, Prisma.BlockList$unblockRequestsArgs<ExtArgs>>): Prisma.PrismaPromise<runtime.Types.Result.GetResult<Prisma.$UnblockRequestPayload<ExtArgs>, T, "findMany", GlobalOmitOptions> | Null>
   /**
    * Attaches callbacks for the resolution and/or rejection of the Promise.
    * @param onfulfilled The callback to execute when the Promise is resolved.
@@ -896,6 +1016,10 @@ export type BlockListFindUniqueArgs<ExtArgs extends runtime.Types.Extensions.Int
    */
   omit?: Prisma.BlockListOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlockListInclude<ExtArgs> | null
+  /**
    * Filter, which BlockList to fetch.
    */
   where: Prisma.BlockListWhereUniqueInput
@@ -914,6 +1038,10 @@ export type BlockListFindUniqueOrThrowArgs<ExtArgs extends runtime.Types.Extensi
    */
   omit?: Prisma.BlockListOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlockListInclude<ExtArgs> | null
+  /**
    * Filter, which BlockList to fetch.
    */
   where: Prisma.BlockListWhereUniqueInput
@@ -931,6 +1059,10 @@ export type BlockListFindFirstArgs<ExtArgs extends runtime.Types.Extensions.Inte
    * Omit specific fields from the BlockList
    */
   omit?: Prisma.BlockListOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlockListInclude<ExtArgs> | null
   /**
    * Filter, which BlockList to fetch.
    */
@@ -980,6 +1112,10 @@ export type BlockListFindFirstOrThrowArgs<ExtArgs extends runtime.Types.Extensio
    */
   omit?: Prisma.BlockListOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlockListInclude<ExtArgs> | null
+  /**
    * Filter, which BlockList to fetch.
    */
   where?: Prisma.BlockListWhereInput
@@ -1027,6 +1163,10 @@ export type BlockListFindManyArgs<ExtArgs extends runtime.Types.Extensions.Inter
    * Omit specific fields from the BlockList
    */
   omit?: Prisma.BlockListOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlockListInclude<ExtArgs> | null
   /**
    * Filter, which BlockLists to fetch.
    */
@@ -1076,6 +1216,10 @@ export type BlockListCreateArgs<ExtArgs extends runtime.Types.Extensions.Interna
    */
   omit?: Prisma.BlockListOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlockListInclude<ExtArgs> | null
+  /**
    * The data needed to create a BlockList.
    */
   data: Prisma.XOR<Prisma.BlockListCreateInput, Prisma.BlockListUncheckedCreateInput>
@@ -1123,6 +1267,10 @@ export type BlockListUpdateArgs<ExtArgs extends runtime.Types.Extensions.Interna
    * Omit specific fields from the BlockList
    */
   omit?: Prisma.BlockListOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlockListInclude<ExtArgs> | null
   /**
    * The data needed to update a BlockList.
    */
@@ -1190,6 +1338,10 @@ export type BlockListUpsertArgs<ExtArgs extends runtime.Types.Extensions.Interna
    */
   omit?: Prisma.BlockListOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlockListInclude<ExtArgs> | null
+  /**
    * The filter to search for the BlockList to update in case it exists.
    */
   where: Prisma.BlockListWhereUniqueInput
@@ -1216,6 +1368,10 @@ export type BlockListDeleteArgs<ExtArgs extends runtime.Types.Extensions.Interna
    */
   omit?: Prisma.BlockListOmit<ExtArgs> | null
   /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlockListInclude<ExtArgs> | null
+  /**
    * Filter which BlockList to delete.
    */
   where: Prisma.BlockListWhereUniqueInput
@@ -1236,6 +1392,30 @@ export type BlockListDeleteManyArgs<ExtArgs extends runtime.Types.Extensions.Int
 }
 
 /**
+ * BlockList.unblockRequests
+ */
+export type BlockList$unblockRequestsArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
+  /**
+   * Select specific fields to fetch from the UnblockRequest
+   */
+  select?: Prisma.UnblockRequestSelect<ExtArgs> | null
+  /**
+   * Omit specific fields from the UnblockRequest
+   */
+  omit?: Prisma.UnblockRequestOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.UnblockRequestInclude<ExtArgs> | null
+  where?: Prisma.UnblockRequestWhereInput
+  orderBy?: Prisma.UnblockRequestOrderByWithRelationInput | Prisma.UnblockRequestOrderByWithRelationInput[]
+  cursor?: Prisma.UnblockRequestWhereUniqueInput
+  take?: number
+  skip?: number
+  distinct?: Prisma.UnblockRequestScalarFieldEnum | Prisma.UnblockRequestScalarFieldEnum[]
+}
+
+/**
  * BlockList without action
  */
 export type BlockListDefaultArgs<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
@@ -1247,4 +1427,8 @@ export type BlockListDefaultArgs<ExtArgs extends runtime.Types.Extensions.Intern
    * Omit specific fields from the BlockList
    */
   omit?: Prisma.BlockListOmit<ExtArgs> | null
+  /**
+   * Choose, which related nodes to fetch as well
+   */
+  include?: Prisma.BlockListInclude<ExtArgs> | null
 }

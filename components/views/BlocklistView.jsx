@@ -117,7 +117,7 @@ export default function BlocklistView({ currentUser }) {
     // "Other" sends the typed text, or the literal "Other" when the field is empty.
     const reasonToSend = reason === "other" ? detail || "Other" : reason;
 
-    if (!DOMAINS.some((d) => d.value === domain)) return setError(MESSAGES.domainRequired);
+    if (!domains.some((d) => d.value === domain)) return setError(MESSAGES.domainRequired);
     if (isBlocked(value)) return setError(MESSAGES.duplicate);
 
     inFlight.current = true;
@@ -176,7 +176,27 @@ export default function BlocklistView({ currentUser }) {
     }
   }
 
+  const [domains, setDomains] = useState([]);
   const clearError = () => error && setError("");
+  useEffect(() => {
+    const fetchDomains = async () => {
+      try {
+        const response = await fetch("/api/users");
+        if (!response.ok) throw new Error("Failed to fetch domains");
+        const data = await response.json();
+        console.log("Fetched domains:", data);
+        const modifiedDomains = data.map((user) => ({
+          value: user.domain,
+          label: user.domain,
+        }));
+        setDomains(modifiedDomains.filter((domain) => domain.value!== null && domain.value !== "" && domain.value !== undefined));
+      } catch (err) {
+        console.error("Error fetching domains:", err);
+      }
+    };
+
+    fetchDomains();
+  }, []);
 
   return (
     <>
@@ -253,7 +273,7 @@ export default function BlocklistView({ currentUser }) {
                 label="Domain"
                 placeholder="Select domain"
                 value={domain}
-                options={DOMAINS}
+                options={domains}
                 disabled={submitting}
                 describedBy={errorId}
                 onChange={(v) => {
@@ -279,7 +299,7 @@ export default function BlocklistView({ currentUser }) {
               <p className="hint">{blocked?.data?.length ?? 0} in total</p>
             </div>
           </header>
-          <BlockTable />
+          <BlockTable currentUser={currentUser} />
         </section>
         <section style={{ display: "none" }} className="card">
           <header>

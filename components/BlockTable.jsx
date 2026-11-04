@@ -4,6 +4,7 @@ import { useCallback, useState } from "react";
 import Swal from "sweetalert2";
 import { useDashboard } from "./DashboardProvider";
 import { formatDateTime } from "@/lib/format";
+import Icon from "./Icon";
 
 const STATUS = {
   PENDING: { label: "Pending", tone: "warning" },
@@ -14,8 +15,8 @@ const STATUS = {
 // Accept is only offered when the entry isn't already approved.
 const canAccept = (status) => status === "PENDING" || status === "REJECTED";
 
-export default function BlockTable({ compact = false }) {
-  const { blocked, removeBlock, toast, setBlocked, currentUser } = useDashboard();
+export default function BlockTable({ compact = false, currentUser }) {
+  const { blocked, removeBlock, toast, setBlocked } = useDashboard();
   const updateBlockStatus = useCallback((id, status) => {
     setBlocked((prev) => ({
       ...prev,
@@ -137,7 +138,7 @@ export default function BlockTable({ compact = false }) {
                 {!compact && (
                   <td>
                     <div className="flex gap-1 row-actions">
-                      {canAccept(b.status) && (
+                      {canAccept(b.status) && currentUser.role === "ADMIN" && (
                         <button
                           type="button"
                           className="btn sm success"
@@ -148,15 +149,35 @@ export default function BlockTable({ compact = false }) {
                           {busy ? "Saving…" : "Accept"}
                         </button>
                       )}
-                      <button
-                        type="button"
-                        className="btn sm"
-                        disabled={busy}
-                        onClick={() => editStatus(b)}
-                        aria-label={`Edit status for ${b.email}`}
-                      >
-                        Edit status
-                      </button>
+                      {currentUser?.role === "ADMIN" ? (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => editStatus(b)}
+                          aria-label={`Edit status for ${b.email}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition
+               hover:bg-indigo-700 active:scale-[0.98]
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
+               disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-indigo-600"
+                        >
+                          <Icon name="set" />
+                          Edit status
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => requestUnblock(b)} // wire up your handler
+                          aria-label={`Request to unblock ${b.email}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-1.5 text-sm font-medium text-amber-800 transition
+               hover:bg-amber-100 active:scale-[0.98]
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2
+               disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Icon name="unlock" />
+                          Request to Unblock
+                        </button>
+                      )}
                       {b.status == "PENDING" && (
                         <button
                           type="button"

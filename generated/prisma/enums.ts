@@ -27,9 +27,18 @@ export type Status = (typeof Status)[keyof typeof Status]
 
 
 export const BlockStatus = {
-  PENDING: 'PENDING',
-  REJECTED: 'REJECTED',
-  APPROVED: 'APPROVED'
+  BLOCKED: 'BLOCKED',
+  UNBLOCK_REQUESTED: 'UNBLOCK_REQUESTED',
+  UNBLOCKED: 'UNBLOCKED'
 } as const
 
 export type BlockStatus = (typeof BlockStatus)[keyof typeof BlockStatus]
+
+
+export const RequestStatus = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED'
+} as const
+
+export type RequestStatus = (typeof RequestStatus)[keyof typeof RequestStatus]

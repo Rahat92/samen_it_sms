@@ -32,3 +32,8 @@ export type MailEvent = Prisma.MailEventModel
  * 
  */
 export type BlockList = Prisma.BlockListModel
+/**
+ * Model UnblockRequest
+ * 
+ */
+export type UnblockRequest = Prisma.UnblockRequestModel

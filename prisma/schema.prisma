@@ -12,14 +12,24 @@ enum Role {
   ADMIN
   USER
 }
+
 enum Status {
   ACTIVE
   INACTIVE
 }
+
+// State of a block-list entry. Entries are BLOCKED by default.
 enum BlockStatus {
+  BLOCKED            // default
+  UNBLOCK_REQUESTED  // a user asked for review
+  UNBLOCKED          // request approved
+}
+
+// State of an individual unblock request.
+enum RequestStatus {
   PENDING
-  REJECTED
   APPROVED
+  REJECTED
 }
 
 model User {
@@ -32,6 +42,9 @@ model User {
   domain    String?
   role      Role     @default(USER)
   createdAt DateTime @default(now())
+
+  unblockRequests UnblockRequest[] @relation("RequestedBy")
+  reviewedRequests UnblockRequest[] @relation("ReviewedBy")
 }
 
 model MailEvent {
@@ -61,11 +74,35 @@ model MailEvent {
 }
 
 model BlockList {
-  id        Int      @id @default(autoincrement())
-  email     String    @unique
+  id        Int         @id @default(autoincrement())
+  email     String      @unique
   reason    String?
   domain    String?
-  status    BlockStatus @default(PENDING)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  status    BlockStatus @default(BLOCKED)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  unblockRequests UnblockRequest[]
+
+  @@index([status])
+  @@index([domain])
+}
+
+model UnblockRequest {
+  id            Int           @id @default(autoincrement())
+  blockListId   Int
+  blockList     BlockList     @relation(fields: [blockListId], references: [id], onDelete: Cascade)
+  requestedById Int
+  requestedBy   User          @relation("RequestedBy", fields: [requestedById], references: [id])
+  message       String?       // user's justification
+  status        RequestStatus @default(PENDING)
+  reviewedById  Int?
+  reviewedBy    User?         @relation("ReviewedBy", fields: [reviewedById], references: [id])
+  reviewNote    String?
+  reviewedAt    DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([blockListId, status])
+  @@index([requestedById])
 }

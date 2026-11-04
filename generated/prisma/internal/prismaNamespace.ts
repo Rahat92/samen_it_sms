@@ -399,7 +399,8 @@ type FieldRefInputType<Model, FieldType> = Model extends never ? never : FieldRe
 export const ModelName = {
   User: 'User',
   MailEvent: 'MailEvent',
-  BlockList: 'BlockList'
+  BlockList: 'BlockList',
+  UnblockRequest: 'UnblockRequest'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -415,7 +416,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "mailEvent" | "blockList"
+    modelProps: "user" | "mailEvent" | "blockList" | "unblockRequest"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -641,6 +642,80 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
+    UnblockRequest: {
+      payload: Prisma.$UnblockRequestPayload<ExtArgs>
+      fields: Prisma.UnblockRequestFieldRefs
+      operations: {
+        findUnique: {
+          args: Prisma.UnblockRequestFindUniqueArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnblockRequestPayload> | null
+        }
+        findUniqueOrThrow: {
+          args: Prisma.UnblockRequestFindUniqueOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnblockRequestPayload>
+        }
+        findFirst: {
+          args: Prisma.UnblockRequestFindFirstArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnblockRequestPayload> | null
+        }
+        findFirstOrThrow: {
+          args: Prisma.UnblockRequestFindFirstOrThrowArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnblockRequestPayload>
+        }
+        findMany: {
+          args: Prisma.UnblockRequestFindManyArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnblockRequestPayload>[]
+        }
+        create: {
+          args: Prisma.UnblockRequestCreateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnblockRequestPayload>
+        }
+        createMany: {
+          args: Prisma.UnblockRequestCreateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        createManyAndReturn: {
+          args: Prisma.UnblockRequestCreateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnblockRequestPayload>[]
+        }
+        delete: {
+          args: Prisma.UnblockRequestDeleteArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnblockRequestPayload>
+        }
+        update: {
+          args: Prisma.UnblockRequestUpdateArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnblockRequestPayload>
+        }
+        deleteMany: {
+          args: Prisma.UnblockRequestDeleteManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateMany: {
+          args: Prisma.UnblockRequestUpdateManyArgs<ExtArgs>
+          result: BatchPayload
+        }
+        updateManyAndReturn: {
+          args: Prisma.UnblockRequestUpdateManyAndReturnArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnblockRequestPayload>[]
+        }
+        upsert: {
+          args: Prisma.UnblockRequestUpsertArgs<ExtArgs>
+          result: runtime.Types.Utils.PayloadToResult<Prisma.$UnblockRequestPayload>
+        }
+        aggregate: {
+          args: Prisma.UnblockRequestAggregateArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.AggregateUnblockRequest>
+        }
+        groupBy: {
+          args: Prisma.UnblockRequestGroupByArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UnblockRequestGroupByOutputType>[]
+        }
+        count: {
+          args: Prisma.UnblockRequestCountArgs<ExtArgs>
+          result: runtime.Types.Utils.Optional<Prisma.UnblockRequestCountAggregateOutputType> | number
+        }
+      }
+    }
   }
 } & {
   other: {
@@ -730,6 +805,22 @@ export const BlockListScalarFieldEnum = {
 } as const
 
 export type BlockListScalarFieldEnum = (typeof BlockListScalarFieldEnum)[keyof typeof BlockListScalarFieldEnum]
+
+
+export const UnblockRequestScalarFieldEnum = {
+  id: 'id',
+  blockListId: 'blockListId',
+  requestedById: 'requestedById',
+  message: 'message',
+  status: 'status',
+  reviewedById: 'reviewedById',
+  reviewNote: 'reviewNote',
+  reviewedAt: 'reviewedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+} as const
+
+export type UnblockRequestScalarFieldEnum = (typeof UnblockRequestScalarFieldEnum)[keyof typeof UnblockRequestScalarFieldEnum]
 
 
 export const SortOrder = {
@@ -880,6 +971,20 @@ export type EnumBlockStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$Pris
  * Reference to a field of type 'BlockStatus[]'
  */
 export type ListEnumBlockStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'BlockStatus[]'>
+    
+
+
+/**
+ * Reference to a field of type 'RequestStatus'
+ */
+export type EnumRequestStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RequestStatus'>
+    
+
+
+/**
+ * Reference to a field of type 'RequestStatus[]'
+ */
+export type ListEnumRequestStatusFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'RequestStatus[]'>
     
 
 /**
@@ -1036,6 +1141,7 @@ export type GlobalOmitConfig = {
   user?: Prisma.UserOmit
   mailEvent?: Prisma.MailEventOmit
   blockList?: Prisma.BlockListOmit
+  unblockRequest?: Prisma.UnblockRequestOmit
 }
 
 /* Types for Logging */

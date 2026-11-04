@@ -11,4 +11,5 @@
 export type * from './models/User'
 export type * from './models/MailEvent'
 export type * from './models/BlockList'
+export type * from './models/UnblockRequest'
 export type * from './commonInputTypes'

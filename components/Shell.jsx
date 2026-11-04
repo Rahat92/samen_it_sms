@@ -19,7 +19,7 @@ export default function Shell({ children, currentUser }) {
   const pathname = usePathname();
   const { range, setRange, tenant, setTenant, scoped, toastMsg, customRange, setCustomRange } =
     useDashboard();
-
+  const [tenants, setTenants] = useState([]);
   const current =
     NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href))) ?? NAV[0];
   const badCount = totals(scoped).bad;
@@ -152,7 +152,16 @@ export default function Shell({ children, currentUser }) {
 
   const isAdmin = currentUser?.role === "ADMIN";
   const isUser = currentUser?.role === "USER";
-
+  useEffect(() => {
+    const fetchTenants = async () => {
+      const res = await fetch(`/api/users`)
+      
+      const users = await res.json()
+      setTenants(users)
+    }
+    fetchTenants()
+  }, [])
+  console.log(tenants)
   return (
     <div className="shell">
       <aside className="side">
@@ -231,9 +240,14 @@ export default function Shell({ children, currentUser }) {
             >
               {isAdmin && <option value="all">All Tenants</option>}
               {isAdmin ? (
-                Object.entries(TENANTS).map(([k, t]) => (
-                  <option key={k} value={t.domain}>{t.name}</option>
-                ))
+                // Object.entries(TENANTS).map(([k, t]) => (
+                //   <option key={k} value={t.domain}>{t.name}</option>
+                // ))
+                tenants?.filter((item) => item.domain).map((i) => {
+                  return(
+                    <option key={i} value={i.domain}>{i.name}</option>
+                  )
+                })
               ) : (
                 currentUser && (
                   <option value={currentUser.email.split("@")[1]}>{currentUser.name}</option>

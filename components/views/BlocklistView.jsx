@@ -11,8 +11,11 @@ const REQUEST_TIMEOUT_MS = 10000;
 
 // Add new reasons here; the select and validation both read from this list.
 const REASONS = [
-  { value: "spam", label: "Spam" },
-  { value: "abuse", label: "Abuse" },
+  { value: "Mailbox Full", label: "Mailbox Full" },
+  { value: "Recipient Rejected", label: "Recipient Rejected" },
+  { value: "Invalid Mailbox", label: "Invalid Mailbox" },
+  { value: "Inactive Mailbox", label: "Inactive Mailbox" },
+  { value: "Admin Blocked", label: "Admin Blocked" },
   { value: "other", label: "Other" },
 ];
 

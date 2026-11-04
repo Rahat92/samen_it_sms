@@ -87,7 +87,7 @@ export default function BlockTable({ compact = false, currentUser }) {
     try {
       let response;
       try {
-        response = await fetch(`http://localhost:3001/api/blocklist-requests/${b.id}`, {
+        response = await fetch(`/api/blocklist-requests/${b.id}`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ message: value?.trim() || undefined }),

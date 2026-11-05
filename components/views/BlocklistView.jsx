@@ -8,6 +8,7 @@ import { stamp } from "@/lib/format";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REQUEST_TIMEOUT_MS = 10000;
+const MAX_EMAILS = 100; // per submit; keep in sync with the API route
 
 // Add new reasons here; the select and validation both read from this list.
 const REASONS = [
@@ -21,26 +22,38 @@ const REASONS = [
 
 const MAX_CUSTOM_REASON = 100;
 
-// TODO: replace these placeholders with your real domains.
-const DOMAINS = [
-  { value: "mail.example.com", label: "mail.example.com" },
-  { value: "news.example.com", label: "news.example.com" },
-  { value: "support.example.com", label: "support.example.com" },
-];
-
 const MESSAGES = {
-  invalid: "Enter a full email address, like name@example.com.",
-  reasonRequired: "Select a reason for blocking this address.",
+  invalid: "Enter at least one email address, like name@example.com.",
+  tooMany: `You can block up to ${MAX_EMAILS} addresses at a time.`,
+  reasonRequired: "Select a reason for blocking these addresses.",
   customReasonTooLong: `Keep the reason under ${MAX_CUSTOM_REASON} characters.`,
   domainRequired: "Select a domain for this block.",
   duplicate: "That address is already on the blocklist.",
+  allDuplicates: "All of these addresses are already on the blocklist.",
   network: "We couldn't reach the server. Check your connection and try again.",
   timeout: "The request timed out. Please try again.",
   server: "Something went wrong on our side. Please try again in a moment.",
   unauthorized: "Your session has expired. Please sign in again.",
   rateLimited: "Too many requests. Please wait a moment and try again.",
-  generic: "We couldn't block that address. Please try again.",
+  generic: "We couldn't block those addresses. Please try again.",
 };
+
+// Split pasted text on commas, semicolons, spaces and new lines.
+// Lowercases and removes repeats so "A@x.com, a@x.com" counts once.
+function parseEmails(raw) {
+  const unique = [
+    ...new Set(
+      raw
+        .split(/[\s,;]+/)
+        .map((s) => s.trim().toLowerCase())
+        .filter(Boolean)
+    ),
+  ];
+  return {
+    valid: unique.filter((e) => EMAIL.test(e)),
+    invalid: unique.filter((e) => !EMAIL.test(e)),
+  };
+}
 
 // Pull a readable message out of an error response without ever throwing.
 async function readErrorMessage(response) {
@@ -56,7 +69,7 @@ async function readErrorMessage(response) {
 
 function messageForStatus(status) {
   if (status === 401 || status === 403) return MESSAGES.unauthorized;
-  if (status === 409) return MESSAGES.duplicate;
+  if (status === 409) return MESSAGES.allDuplicates;
   if (status === 429) return MESSAGES.rateLimited;
   if (status >= 500) return MESSAGES.server;
   return MESSAGES.generic;
@@ -64,7 +77,6 @@ function messageForStatus(status) {
 
 // Reusable styled select so reason and domain stay identical.
 function SelectField({ id, label, placeholder, value, options, disabled, describedBy, onChange }) {
-
   return (
     <>
       <label htmlFor={id} className="sr-only">{label}</label>
@@ -92,24 +104,36 @@ function SelectField({ id, label, placeholder, value, options, disabled, describ
 }
 
 export default function BlocklistView({ currentUser }) {
-  const { blocked, history, isBlocked, toast } = useDashboard();
-  const [email, setEmail] = useState("");
+  const { blocked, history, isBlocked, toast, setBlocked } = useDashboard();
+  const [emailsText, setEmailsText] = useState("");
   const [reason, setReason] = useState("");
   const [customReason, setCustomReason] = useState("");
   const [domain, setDomain] = useState("");
+  const [domains, setDomains] = useState([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const inFlight = useRef(false); // guards against double submits before state updates
 
   const errorId = error ? "blockEmailError" : undefined;
+  const parsed = parseEmails(emailsText);
+  const clearError = () => error && setError("");
 
   async function submit(e) {
-    e.preventDefault();
+    e?.preventDefault();
     if (inFlight.current) return;
 
     // 1. Validate locally before touching the network.
-    const value = email.trim();
-    if (!EMAIL.test(value)) return setError(MESSAGES.invalid);
+    const { valid, invalid } = parseEmails(emailsText);
+    if (!valid.length && !invalid.length) return setError(MESSAGES.invalid);
+    if (invalid.length) {
+      const shown = invalid.slice(0, 3).join(", ");
+      const more = invalid.length > 3 ? ` and ${invalid.length - 3} more` : "";
+      return setError(
+        `${invalid.length} invalid address${invalid.length > 1 ? "es" : ""}: ${shown}${more}. Fix or remove ${invalid.length > 1 ? "them" : "it"} and try again.`
+      );
+    }
+    if (valid.length > MAX_EMAILS) return setError(MESSAGES.tooMany);
+
     if (!REASONS.some((r) => r.value === reason)) return setError(MESSAGES.reasonRequired);
 
     const detail = customReason.trim();
@@ -121,7 +145,13 @@ export default function BlocklistView({ currentUser }) {
     const reasonToSend = reason === "other" ? detail || "Other" : reason;
 
     if (!domains.some((d) => d.value === domain)) return setError(MESSAGES.domainRequired);
-    if (isBlocked(value)) return setError(MESSAGES.duplicate);
+
+    // Skip addresses that are already blocked; the server also double-checks.
+    const fresh = valid.filter((addr) => !isBlocked(addr));
+    const alreadyBlocked = valid.length - fresh.length;
+    if (!fresh.length) {
+      return setError(valid.length > 1 ? MESSAGES.allDuplicates : MESSAGES.duplicate);
+    }
 
     inFlight.current = true;
     setSubmitting(true);
@@ -136,7 +166,7 @@ export default function BlocklistView({ currentUser }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          email: value,
+          emails: fresh,
           reason: reasonToSend,
           domain,
         }),
@@ -151,26 +181,49 @@ export default function BlocklistView({ currentUser }) {
             ? serverMessage
             : messageForStatus(response.status);
         setError(message);
-        toast("Couldn't block recipient");
+        toast("Couldn't block recipients");
         return;
       }
 
-      // 3. Reset the form only after the server confirms.
-      setEmail("");
+      let result = null;
+      try {
+        result = await response.json();
+      } catch {
+        // Fall back to the counts we sent.
+      }
+      const created = result?.created ?? fresh.length;
+      const skipped = alreadyBlocked + (result?.skipped?.length ?? 0);
+
+      // 3. Show the new rows in the table right away, then reset the form.
+      if (Array.isArray(result?.data) && result.data.length) {
+        const newIds = new Set(result.data.map((row) => row.id));
+        setBlocked((prev) => ({
+          ...prev,
+          data: [...result.data, ...(prev?.data ?? []).filter((row) => !newIds.has(row.id))],
+        }));
+      }
+      setEmailsText("");
       setReason("");
       setCustomReason("");
       setDomain("");
+
+      const summary =
+        created === 1 && fresh.length === 1
+          ? `${fresh[0]} has been added to the blocklist.`
+          : `${created} addresses have been added to the blocklist.`;
       await Swal.fire({
         icon: "success",
-        title: "Recipient blocked",
-        text: `${value} has been added to the blocklist.`,
+        title: created === 1 ? "Recipient blocked" : "Recipients blocked",
+        text: skipped
+          ? `${summary} ${skipped} ${skipped === 1 ? "was" : "were"} already blocked and skipped.`
+          : summary,
         confirmButtonText: "Done",
-        timer: 3000,
+        timer: 3500,
         timerProgressBar: true,
       });
     } catch (err) {
       setError(err?.name === "AbortError" ? MESSAGES.timeout : MESSAGES.network);
-      toast("Couldn't block recipient");
+      toast("Couldn't block recipients");
       // Report to your monitoring service here (Sentry, Datadog, etc.).
     } finally {
       clearTimeout(timer);
@@ -179,20 +232,21 @@ export default function BlocklistView({ currentUser }) {
     }
   }
 
-  const [domains, setDomains] = useState([]);
-  const clearError = () => error && setError("");
   useEffect(() => {
     const fetchDomains = async () => {
       try {
         const response = await fetch("/api/users");
         if (!response.ok) throw new Error("Failed to fetch domains");
         const data = await response.json();
-        console.log("Fetched domains:", data);
         const modifiedDomains = data.map((user) => ({
           value: user.domain,
           label: user.domain,
         }));
-        setDomains(modifiedDomains.filter((domain) => domain.value!== null && domain.value !== "" && domain.value !== undefined));
+        setDomains(
+          modifiedDomains.filter(
+            (d) => d.value !== null && d.value !== "" && d.value !== undefined
+          )
+        );
       } catch (err) {
         console.error("Error fetching domains:", err);
       }
@@ -201,34 +255,41 @@ export default function BlocklistView({ currentUser }) {
     fetchDomains();
   }, []);
 
+  const count = parsed.valid.length + parsed.invalid.length;
+
   return (
     <>
       <section className="card">
         {currentUser?.role === "ADMIN" && (
           <header>
             <div>
-              <h2>Add a recipient</h2>
-              <p className="hint">Mail to this address will not be sent</p>
+              <h2>Add recipients</h2>
+              <p className="hint">Mail to these addresses will not be sent</p>
             </div>
           </header>
         )}
         {currentUser?.role === "ADMIN" && (
           <div className="pad">
             <form className="formrow" onSubmit={submit} noValidate>
-              <label htmlFor="blockEmail" className="sr-only">Email address</label>
-              <input
+              <label htmlFor="blockEmail" className="sr-only">Email addresses</label>
+              <textarea
                 id="blockEmail"
-                type="text"
-                inputMode="email"
-                placeholder="name@example.com"
+                className="emails-field"
+                rows={2}
+                placeholder="name@example.com, other@example.com"
                 autoComplete="off"
-                value={email}
+                spellCheck={false}
+                value={emailsText}
                 disabled={submitting}
                 aria-invalid={Boolean(error)}
                 aria-describedby={errorId}
                 onChange={(e) => {
-                  setEmail(e.target.value);
+                  setEmailsText(e.target.value);
                   clearError();
+                }}
+                onKeyDown={(e) => {
+                  // Enter adds a new line; Ctrl/Cmd + Enter submits.
+                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit(e);
                 }}
               />
 
@@ -265,9 +326,6 @@ export default function BlocklistView({ currentUser }) {
                       clearError();
                     }}
                   />
-                  {/* <span className="reason-count" aria-hidden="true">
-                  {customReason.length}/{MAX_CUSTOM_REASON}
-                </span> */}
                 </div>
               )}
 
@@ -286,9 +344,24 @@ export default function BlocklistView({ currentUser }) {
               />
 
               <button className="btn primary" type="submit" disabled={submitting}>
-                {submitting ? "Blocking…" : "Block address"}
+                {submitting
+                  ? "Blocking…"
+                  : parsed.valid.length > 1
+                    ? `Block ${parsed.valid.length} addresses`
+                    : "Block address"}
               </button>
             </form>
+
+            <p className="hint" style={{ marginTop: 8 }}>
+              Separate multiple addresses with commas, spaces or new lines.
+              {count > 0 && (
+                <>
+                  {" "}
+                  {parsed.valid.length} valid
+                  {parsed.invalid.length > 0 && `, ${parsed.invalid.length} invalid`}.
+                </>
+              )}
+            </p>
             <p id="blockEmailError" className="err" role="alert">{error}</p>
           </div>
         )}

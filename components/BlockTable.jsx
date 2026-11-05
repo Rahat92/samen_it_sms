@@ -13,6 +13,8 @@ const STATUS = {
   UNBLOCKED: { label: "Unblocked", tone: "success" },
 };
 
+const PAGE_SIZE = 50; // rows shown at first; "Show more" adds another page
+
 const isAdminRole = (role) => role === "ADMIN" || role === "SUPERADMIN";
 
 // Admin can approve while the entry is blocked or waiting for review.
@@ -21,7 +23,9 @@ const canAccept = (status) => status === "BLOCKED" || status === "UNBLOCK_REQUES
 export default function BlockTable({ compact = false, currentUser }) {
   const { blocked, toast, setBlocked } = useDashboard();
   const [busyId, setBusyId] = useState(null);
+  const [visible, setVisible] = useState(PAGE_SIZE);
   const rows = blocked?.data ?? [];
+  const shown = compact ? rows.slice(0, 3) : rows.slice(0, visible);
   const isAdmin = isAdminRole(currentUser?.role);
 
   // Patch one row in the shared blocklist state
@@ -192,7 +196,7 @@ export default function BlockTable({ compact = false, currentUser }) {
           </tr>
         </thead>
         <tbody>
-          {rows.slice(0, compact ? 3 : 50).map((b) => {
+          {shown.map((b) => {
             const s = STATUS[b.status] ?? { label: b.status ?? "Unknown", tone: "muted" };
             const busy = busyId === b.id;
 
@@ -281,6 +285,14 @@ export default function BlockTable({ compact = false, currentUser }) {
           })}
         </tbody>
       </table>
+
+      {!compact && rows.length > shown.length && (
+        <div className="pad" style={{ textAlign: "center" }}>
+          <button type="button" className="btn sm" onClick={() => setVisible((n) => n + PAGE_SIZE)}>
+            Show more ({rows.length - shown.length} remaining)
+          </button>
+        </div>
+      )}
     </div>
   );
 }

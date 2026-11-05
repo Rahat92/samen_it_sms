@@ -3,10 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import BlockTable from "../BlockTable";
+import EmailChipsInput, { isValidEmail } from "./EmailChipsInput";
 import { useDashboard } from "../DashboardProvider";
 import { stamp } from "@/lib/format";
 
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const REQUEST_TIMEOUT_MS = 10000;
 const MAX_EMAILS = 100; // per submit; keep in sync with the API route
 
@@ -38,10 +38,10 @@ const MESSAGES = {
   generic: "We couldn't block those addresses. Please try again.",
 };
 
-// Split pasted text on commas, semicolons, spaces and new lines.
+// Split text on commas, semicolons, spaces and new lines.
 // Lowercases and removes repeats so "A@x.com, a@x.com" counts once.
 function parseEmails(raw) {
-  const unique = [
+  const all = [
     ...new Set(
       raw
         .split(/[\s,;]+/)
@@ -50,8 +50,9 @@ function parseEmails(raw) {
     ),
   ];
   return {
-    valid: unique.filter((e) => EMAIL.test(e)),
-    invalid: unique.filter((e) => !EMAIL.test(e)),
+    all,
+    valid: all.filter(isValidEmail),
+    invalid: all.filter((e) => !isValidEmail(e)),
   };
 }
 
@@ -105,7 +106,8 @@ function SelectField({ id, label, placeholder, value, options, disabled, describ
 
 export default function BlocklistView({ currentUser }) {
   const { blocked, history, isBlocked, toast, setBlocked } = useDashboard();
-  const [emailsText, setEmailsText] = useState("");
+  const [emails, setEmails] = useState([]); // confirmed chips
+  const [draft, setDraft] = useState(""); // text still being typed
   const [reason, setReason] = useState("");
   const [customReason, setCustomReason] = useState("");
   const [domain, setDomain] = useState("");
@@ -115,7 +117,7 @@ export default function BlocklistView({ currentUser }) {
   const inFlight = useRef(false); // guards against double submits before state updates
 
   const errorId = error ? "blockEmailError" : undefined;
-  const parsed = parseEmails(emailsText);
+  const parsed = parseEmails([...emails, draft].join(" "));
   const clearError = () => error && setError("");
 
   async function submit(e) {
@@ -123,13 +125,14 @@ export default function BlocklistView({ currentUser }) {
     if (inFlight.current) return;
 
     // 1. Validate locally before touching the network.
-    const { valid, invalid } = parseEmails(emailsText);
-    if (!valid.length && !invalid.length) return setError(MESSAGES.invalid);
+    const { all, valid, invalid } = parseEmails([...emails, draft].join(" "));
+    if (!all.length) return setError(MESSAGES.invalid);
     if (invalid.length) {
-      const shown = invalid.slice(0, 3).join(", ");
-      const more = invalid.length > 3 ? ` and ${invalid.length - 3} more` : "";
+      // Turn any half-typed text into chips so the bad ones are highlighted.
+      setEmails(all);
+      setDraft("");
       return setError(
-        `${invalid.length} invalid address${invalid.length > 1 ? "es" : ""}: ${shown}${more}. Fix or remove ${invalid.length > 1 ? "them" : "it"} and try again.`
+        `${invalid.length} address${invalid.length > 1 ? "es are" : " is"} not valid (highlighted in red). Fix or remove ${invalid.length > 1 ? "them" : "it"} and try again.`
       );
     }
     if (valid.length > MAX_EMAILS) return setError(MESSAGES.tooMany);
@@ -202,7 +205,8 @@ export default function BlocklistView({ currentUser }) {
           data: [...result.data, ...(prev?.data ?? []).filter((row) => !newIds.has(row.id))],
         }));
       }
-      setEmailsText("");
+      setEmails([]);
+      setDraft("");
       setReason("");
       setCustomReason("");
       setDomain("");
@@ -255,8 +259,6 @@ export default function BlocklistView({ currentUser }) {
     fetchDomains();
   }, []);
 
-  const count = parsed.valid.length + parsed.invalid.length;
-
   return (
     <>
       <section className="card">
@@ -270,98 +272,88 @@ export default function BlocklistView({ currentUser }) {
         )}
         {currentUser?.role === "ADMIN" && (
           <div className="pad">
-            <form className="formrow" onSubmit={submit} noValidate>
-              <label htmlFor="blockEmail" className="sr-only">Email addresses</label>
-              <textarea
+            <form onSubmit={submit} noValidate style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+              <EmailChipsInput
                 id="blockEmail"
-                className="emails-field"
-                rows={2}
+                chips={emails}
+                onChipsChange={(next) => {
+                  setEmails(next);
+                  clearError();
+                }}
+                draft={draft}
+                onDraftChange={(v) => {
+                  setDraft(v);
+                  clearError();
+                }}
+                max={MAX_EMAILS}
+                disabled={submitting}
+                hasError={Boolean(error)}
+                describedBy={errorId}
                 placeholder="name@example.com, other@example.com"
-                autoComplete="off"
-                spellCheck={false}
-                value={emailsText}
-                disabled={submitting}
-                aria-invalid={Boolean(error)}
-                aria-describedby={errorId}
-                onChange={(e) => {
-                  setEmailsText(e.target.value);
-                  clearError();
-                }}
-                onKeyDown={(e) => {
-                  // Enter adds a new line; Ctrl/Cmd + Enter submits.
-                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) submit(e);
-                }}
+                onSubmit={() => submit()}
               />
 
-              <SelectField
-                id="blockReason"
-                label="Reason"
-                placeholder="Select reason"
-                value={reason}
-                options={REASONS}
-                disabled={submitting}
-                describedBy={errorId}
-                onChange={(v) => {
-                  setReason(v);
-                  if (v !== "other") setCustomReason("");
-                  clearError();
-                }}
-              />
+              <div className="formrow">
+                <SelectField
+                  id="blockReason"
+                  label="Reason"
+                  placeholder="Select reason"
+                  value={reason}
+                  options={REASONS}
+                  disabled={submitting}
+                  describedBy={errorId}
+                  onChange={(v) => {
+                    setReason(v);
+                    if (v !== "other") setCustomReason("");
+                    clearError();
+                  }}
+                />
 
-              {reason === "other" && (
-                <div className="reason-other">
-                  <label htmlFor="blockReasonOther" className="sr-only">Describe the reason</label>
-                  <input
-                    id="blockReasonOther"
-                    type="text"
-                    placeholder="Describe the reason (optional)"
-                    autoComplete="off"
-                    autoFocus
-                    maxLength={MAX_CUSTOM_REASON}
-                    value={customReason}
-                    disabled={submitting}
-                    aria-describedby={errorId}
-                    onChange={(e) => {
-                      setCustomReason(e.target.value);
-                      clearError();
-                    }}
-                  />
-                </div>
-              )}
+                {reason === "other" && (
+                  <div className="reason-other">
+                    <label htmlFor="blockReasonOther" className="sr-only">Describe the reason</label>
+                    <input
+                      id="blockReasonOther"
+                      type="text"
+                      placeholder="Describe the reason (optional)"
+                      autoComplete="off"
+                      autoFocus
+                      maxLength={MAX_CUSTOM_REASON}
+                      value={customReason}
+                      disabled={submitting}
+                      aria-describedby={errorId}
+                      onChange={(e) => {
+                        setCustomReason(e.target.value);
+                        clearError();
+                      }}
+                    />
+                  </div>
+                )}
 
-              <SelectField
-                id="blockDomain"
-                label="Domain"
-                placeholder="Select domain"
-                value={domain}
-                options={domains}
-                disabled={submitting}
-                describedBy={errorId}
-                onChange={(v) => {
-                  setDomain(v);
-                  clearError();
-                }}
-              />
+                <SelectField
+                  id="blockDomain"
+                  label="Domain"
+                  placeholder="Select domain"
+                  value={domain}
+                  options={domains}
+                  disabled={submitting}
+                  describedBy={errorId}
+                  onChange={(v) => {
+                    setDomain(v);
+                    clearError();
+                  }}
+                />
 
-              <button className="btn primary" type="submit" disabled={submitting}>
-                {submitting
-                  ? "Blocking…"
-                  : parsed.valid.length > 1
-                    ? `Block ${parsed.valid.length} addresses`
-                    : "Block address"}
-              </button>
+                <button className="btn primary" type="submit" disabled={submitting}>
+                  {submitting
+                    ? "Blocking…"
+                    : parsed.valid.length > 1
+                      ? `Block ${parsed.valid.length} addresses`
+                      : "Block address"}
+                </button>
+              </div>
             </form>
 
-            <p className="hint" style={{ marginTop: 8 }}>
-              Separate multiple addresses with commas, spaces or new lines.
-              {count > 0 && (
-                <>
-                  {" "}
-                  {parsed.valid.length} valid
-                  {parsed.invalid.length > 0 && `, ${parsed.invalid.length} invalid`}.
-                </>
-              )}
-            </p>
             <p id="blockEmailError" className="err" role="alert">{error}</p>
           </div>
         )}

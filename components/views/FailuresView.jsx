@@ -16,10 +16,9 @@ export default function FailuresView() {
   return (
     <>
       <div className="stats">
-        <div className="stat"><span className="badge red"><Icon name="fail" /></span><small>Failed / Delayed</small><b>{t.bad}</b></div>
-        <div className="stat"><span className="badge amber"><Icon name="clock" /></span><small>Delayed, will retry</small><b>{t.delayed}</b></div>
-        <div className="stat"><span className="badge red"><Icon name="block" /></span><small>Failed for good</small><b>{t.failed}</b></div>
-        <div className="stat"><span className="badge blue"><Icon name="pct" /></span><small>Success Rate</small><b>{t.rate.toFixed(2)}%</b></div>
+        <div className="stat"><span className="badge red"><Icon name="fail" /></span><small>Soft Failed</small><b>{t.bad}</b></div>
+        <div className="stat"><span className="badge amber"><Icon name="clock" /></span><small>Hard Failed</small><b>{t.delayed}</b></div>
+        <div className="stat"><span className="badge red"><Icon name="block" /></span><small>Pending</small><b>{t.failed}</b></div>
       </div>
 
       {keys.length ? (

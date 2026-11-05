@@ -14,7 +14,6 @@ export function DashboardProvider({ children }) {
         const res = await fetch("/api/blocklist");
         if (!res.ok) throw new Error("Failed to fetch blocklist");
         const data = await res.json();
-        console.log("Fetched blocklist:", data);
         setBlocked(data);
       } catch (err) {
         console.error(err);

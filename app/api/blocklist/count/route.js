@@ -18,7 +18,9 @@ export async function GET() {
 
         const groups = await prisma.blockList.groupBy({
             by: ["status"],
-            where: isAdmin ? {} : { domain: session.domain },
+            where: isAdmin ? {status:{
+                not:'UNBLOCKED'
+            }} : { domain: session.domain },
             _count: { _all: true },
         });
 

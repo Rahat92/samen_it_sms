@@ -20,8 +20,20 @@ export default function Shell({ children, currentUser }) {
   const { range, setRange, tenant, setTenant, scoped, toastMsg, customRange, setCustomRange } =
     useDashboard();
   const [tenants, setTenants] = useState([]);
-  const current =
-    NAV.find((n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href))) ?? NAV[0];
+
+  // Role-filtered nav. A group with a single visible child is shown as a plain link.
+  const role = currentUser?.role;
+  const allowed = (n) => !n.only || n.only.includes(role);
+  const navItems = NAV.flatMap((n) => {
+    if (!n.children) return allowed(n) ? [n] : [];
+    const kids = n.children.filter(allowed);
+    if (!kids.length) return [];
+    if (kids.length === 1) return [{ ...kids[0], label: n.label, icon: n.icon }];
+    return [{ ...n, children: kids }];
+  });
+  const leaves = navItems.flatMap((n) => n.children ?? [n]);
+  const isActive = (n) => (n.href === "/" ? pathname === "/" : pathname.startsWith(n.href));
+  const current = leaves.find(isActive) ?? leaves[0] ?? NAV[0];
   const badCount = totals(scoped).bad;
 
   // Nav badge counts
@@ -29,6 +41,8 @@ export default function Shell({ children, currentUser }) {
   //   pendingCount -> "Unblock Requests" item, admins only
   const [blockedCount, setBlockedCount] = useState(0);
   const [pendingCount, setPendingCount] = useState(0);
+  // Which nav groups the user opened/closed by hand; otherwise a group is open while one of its pages is active
+  const [openGroups, setOpenGroups] = useState({});
 
   useEffect(() => {
     if (!currentUser) return;
@@ -162,6 +176,93 @@ export default function Shell({ children, currentUser }) {
     fetchTenants()
   }, [])
   console.log(tenants)
+
+  const badgeFor = (href) =>
+    href === "/failures" ? badCount
+    : href === "/blocklist" ? blockedCount
+    : href === "/unblock-requests" ? pendingCount
+    : 0;
+  const renderCount = (c) => (c > 0 ? <span className="count">{c > 99 ? "99+" : c}</span> : null);
+
+  const isGroupOpen = (g) => openGroups[g.label] ?? g.children.some((c) => c === current);
+  const toggleGroup = (g) => setOpenGroups((prev) => ({ ...prev, [g.label]: !isGroupOpen(g) }));
+
+  const renderLeaf = (n, { child = false } = {}) => {
+    const props = {
+      className: "nav",
+      "aria-current": n === current ? "page" : undefined,
+      style: child ? { paddingLeft: "2.5rem" } : undefined,
+    };
+    const content = (
+      <>
+        {!child && <Icon name={n.icon} />}
+        <span>{n.label}</span>
+        {renderCount(badgeFor(n.href))}
+      </>
+    );
+    // API URLs (downloads) must be plain links, not client-side navigation
+    return n.href.startsWith("/api/") ? (
+      <a key={n.href} href={n.href} {...props}>{content}</a>
+    ) : (
+      <Link key={n.href} href={n.href} {...props}>{content}</Link>
+    );
+  };
+
+  const renderGroup = (g) => {
+    const open = isGroupOpen(g);
+    const groupId = `nav-group-${g.label.toLowerCase().replace(/\s+/g, "-")}`;
+    // While collapsed, surface the counts of the children that need attention
+    const attention = g.children.reduce((sum, c) => sum + (c.attention ? badgeFor(c.href) : 0), 0);
+    return (
+      <div key={g.label}>
+        <button
+          type="button"
+          className="nav"
+          aria-expanded={open}
+          aria-controls={groupId}
+          onClick={() => toggleGroup(g)}
+          style={{
+            width: "100%",
+            background: "transparent",
+            border: 0,
+            font: "inherit",
+            color: "inherit",
+            textAlign: "left",
+            cursor: "pointer",
+          }}
+        >
+          <Icon name={g.icon} />
+          <span>{g.label}</span>
+          {!open && renderCount(attention)}
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            style={{
+              marginLeft: "auto",
+              flexShrink: 0,
+              transition: "transform .15s ease",
+              transform: open ? "rotate(90deg)" : "none",
+            }}
+          >
+            <path d="M9 6l6 6-6 6" />
+          </svg>
+        </button>
+        {open && (
+          <div id={groupId} role="group" aria-label={g.label}>
+            {g.children.map((c) => renderLeaf(c, { child: true }))}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="shell">
       <aside className="side">
@@ -170,28 +271,7 @@ export default function Shell({ children, currentUser }) {
           <span>Mail Dashboard</span>
         </div>
         <nav style={{ display: "contents" }} aria-label="Sections">
-          {NAV.filter((n) => !n.only || n.only.includes(currentUser?.role)).map((n) => (
-            <Link
-              key={n.href}
-              href={n.href}
-              className="nav"
-              aria-current={n === current ? "page" : undefined}
-            >
-              <Icon name={n.icon} />
-              <span>{n.label}</span>
-              {n.href === "/failures" && badCount > 0 && <span className="count">{badCount}</span>}
-              {n.href === "/blocklist" && blockedCount > 0 && (
-                <span className="count" aria-label={`${blockedCount} blocked`}>
-                  {blockedCount > 99 ? "99+" : blockedCount}
-                </span>
-              )}
-              {n.href === "/unblock-requests" && pendingCount > 0 && (
-                <span className="count" aria-label={`${pendingCount} pending requests`}>
-                  {pendingCount > 99 ? "99+" : pendingCount}
-                </span>
-              )}
-            </Link>
-          ))}
+          {navItems.map((n) => (n.children ? renderGroup(n) : renderLeaf(n)))}
         </nav>
         <div className="side-foot">
           {/* <span>Postal webhooks</span> */}
@@ -245,7 +325,7 @@ export default function Shell({ children, currentUser }) {
                 // ))
                 tenants?.filter((item) => item.domain).map((i) => {
                   return(
-                    <option key={i} value={i.domain}>{i.name}</option>
+                    <option key={i.id ?? i.domain} value={i.domain}>{i.name}</option>
                   )
                 })
               ) : (

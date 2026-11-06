@@ -53,7 +53,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
 .sr-only { position: absolute; left: -9999px; }
 svg.ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
-.shell { display: grid; grid-template-columns: 224px minmax(0, 1fr); min-height: 100vh; }
+.shell { display: grid; grid-template-columns: 230px minmax(0, 1fr); min-height: 100vh; }
 @media (max-width: 860px) { .shell { grid-template-columns: minmax(0, 1fr); } }
 
 /* sidebar */

@@ -9,7 +9,7 @@ export async function GET(request) {
     const event = searchParams.get("event");
     const q = searchParams.get("q");
     const page = Math.max(1, Number(searchParams.get("page")) || 1);
-    const pageSize = Math.min(100, Math.max(1, Number(searchParams.get("limit")) || 10));
+    const pageSize = Math.min(1000, Math.max(1, Number(searchParams.get("limit")) || 10));
     const fromParam = searchParams.get("from");
     const toParam = searchParams.get("to");
     const hours = searchParams.get("timeFrom");

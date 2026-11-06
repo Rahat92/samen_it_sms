@@ -216,18 +216,6 @@ export default function BlockTable({ compact = false, currentUser }) {
                 {!compact && (
                   <td>
                     <div className="flex gap-1 row-actions">
-                      {isAdmin && canAccept(b.status) && (
-                        <button
-                          type="button"
-                          className="btn sm success"
-                          disabled={busy}
-                          onClick={() => changeStatus(b, "UNBLOCKED", "Unblocked")}
-                          aria-label={`Accept ${b.email}`}
-                        >
-                          {busy ? "Saving…" : "Accept"}
-                        </button>
-                      )}
-
                       {isAdmin ? (
                         <button
                           type="button"
@@ -240,7 +228,7 @@ export default function BlockTable({ compact = false, currentUser }) {
                disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-indigo-600"
                         >
                           <Icon name="set" />
-                          Edit status
+                          Edit
                         </button>
                       ) : b.status === "UNBLOCK_REQUESTED" ? (
                         <span
@@ -266,17 +254,6 @@ export default function BlockTable({ compact = false, currentUser }) {
                         </button>
                       ) : null}
 
-                      {isAdmin && b.status === "UNBLOCK_REQUESTED" && (
-                        <button
-                          type="button"
-                          className="btn sm danger"
-                          disabled={busy}
-                          onClick={() => handleReject(b.id)}
-                          aria-label={`Reject unblock request for ${b.email}`}
-                        >
-                          Reject
-                        </button>
-                      )}
                     </div>
                   </td>
                 )}

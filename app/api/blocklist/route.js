@@ -17,7 +17,9 @@ export async function GET(request) {
         const entries = await prisma.blockList.findMany({
             where: isAdmin ? {status:{
                 not:'UNBLOCKED'
-            }} : { domain: session.domain },
+            }} : { domain: session.domain,status: {
+                not:'UNBLOCKED'
+            }  },
             orderBy: { createdAt: "desc" },
             include: {
                 // latest unblock request only

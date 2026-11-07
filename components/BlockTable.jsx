@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Swal from "sweetalert2";
 import { useDashboard } from "./DashboardProvider";
 import { formatDateTime } from "@/lib/format";
@@ -13,7 +13,8 @@ const STATUS = {
   UNBLOCKED: { label: "Unblocked", tone: "success" },
 };
 
-const PAGE_SIZE = 50; // rows shown at first; "Show more" adds another page
+const LIMITS = [10, 20, 50, 100]; // rows-per-page choices (the API caps at 100)
+const DEFAULT_LIMIT = 20;
 
 const isAdminRole = (role) => role === "ADMIN" || role === "SUPERADMIN";
 
@@ -23,18 +24,70 @@ const canAccept = (status) => status === "BLOCKED" || status === "UNBLOCK_REQUES
 export default function BlockTable({ compact = false, currentUser }) {
   const { blocked, toast, setBlocked } = useDashboard();
   const [busyId, setBusyId] = useState(null);
-  const [visible, setVisible] = useState(PAGE_SIZE);
-  const rows = blocked?.data ?? [];
-  const shown = compact ? rows.slice(0, 3) : rows.slice(0, visible);
   const isAdmin = isAdminRole(currentUser?.role);
 
-  // Patch one row in the shared blocklist state
+  // Server-side pagination (full table only; the compact widget keeps using the shared state)
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(DEFAULT_LIMIT);
+  const [data, setData] = useState([]);
+  const [pagination, setPagination] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const reqId = useRef(0);
+
+  const load = useCallback(async () => {
+    const id = ++reqId.current; // ignore out-of-order responses
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/blocklist?page=${page}&limit=${limit}`, { cache: "no-store" });
+      if (!res.ok) {
+        throw new Error(
+          res.status === 401 || res.status === 403
+            ? "Your session has expired. Please sign in again."
+            : "Couldn't load the blocklist."
+        );
+      }
+      const result = await res.json();
+      if (id !== reqId.current) return;
+
+      // Page no longer exists (rows were unblocked or removed): jump to the last one
+      const { total, totalPages } = result.pagination;
+      if (!result.data.length && total > 0 && page > totalPages) {
+        setPage(totalPages);
+        return;
+      }
+      setData(result.data);
+      setPagination(result.pagination);
+    } catch (err) {
+      console.error("load blocklist failed:", err);
+      if (id === reqId.current) setError(err.message || "Couldn't load the blocklist.");
+    } finally {
+      if (id === reqId.current) setLoading(false);
+    }
+  }, [page, limit]);
+
+  useEffect(() => {
+    if (!compact) load();
+  }, [compact, load]);
+
+  // Other components (e.g. the "add address" form) can refresh the table with:
+  //   window.dispatchEvent(new Event("blocklist:changed"))
+  useEffect(() => {
+    if (compact) return;
+    window.addEventListener("blocklist:changed", load);
+    return () => window.removeEventListener("blocklist:changed", load);
+  }, [compact, load]);
+
+  const rows = compact ? (blocked?.data ?? []).slice(0, 3) : data;
+  const shown = rows;
+
+  // Patch one row, both in this page and in the shared blocklist state
   const updateRow = useCallback(
     (id, patch) => {
-      setBlocked((prev) => ({
-        ...prev,
-        data: prev.data.map((b) => (b.id === id ? { ...b, ...patch } : b)),
-      }));
+      const apply = (list) => list.map((b) => (b.id === id ? { ...b, ...patch } : b));
+      setData(apply);
+      setBlocked((prev) => (prev?.data ? { ...prev, data: apply(prev.data) } : prev));
     },
     [setBlocked]
   );
@@ -64,6 +117,8 @@ export default function BlockTable({ compact = false, currentUser }) {
       }
 
       updateRow(b.id, { status });
+      // UNBLOCKED entries drop out of this list, so totals and the page need a refresh
+      if (status === "UNBLOCKED") load();
       toast(successMessage ?? `Status changed to ${STATUS[status].label}`);
     } catch (err) {
       console.error("changeStatus failed:", err);
@@ -173,6 +228,25 @@ export default function BlockTable({ compact = false, currentUser }) {
     await changeStatus(block, "BLOCKED", "Request rejected");
   }
 
+  if (!compact && loading && !rows.length) {
+    return (
+      <div className="empty" role="status" aria-live="polite">
+        Loading blocklist…
+      </div>
+    );
+  }
+
+  if (!compact && error && !rows.length) {
+    return (
+      <div className="empty" role="alert">
+        <p>{error}</p>
+        <button type="button" className="btn sm" onClick={load} style={{ marginTop: 8 }}>
+          Try again
+        </button>
+      </div>
+    );
+  }
+
   if (!rows.length) {
     return (
       <div className="empty">
@@ -181,12 +255,25 @@ export default function BlockTable({ compact = false, currentUser }) {
     );
   }
 
+  const total = pagination?.total ?? rows.length;
+  const from = total ? (page - 1) * limit + 1 : 0;
+  const to = Math.min(page * limit, total);
+
   return (
     <div className="tablewrap">
-      <table style={{ minWidth: compact ? 420 : 640 }}>
+      <table
+        style={{
+          minWidth: compact ? 420 : 640,
+          // keep the previous rows (dimmed) while the next page loads
+          opacity: !compact && loading ? 0.55 : 1,
+          pointerEvents: !compact && loading ? "none" : undefined,
+          transition: "opacity .15s ease",
+        }}
+        aria-busy={!compact && loading}
+      >
         <thead>
           <tr>
-            <th>Id</th>
+            <th>Sl.</th>
             <th>Email</th>
             <th>Domain</th>
             <th>Reason</th>
@@ -196,13 +283,13 @@ export default function BlockTable({ compact = false, currentUser }) {
           </tr>
         </thead>
         <tbody>
-          {shown.map((b) => {
+          {shown.map((b, i) => {
             const s = STATUS[b.status] ?? { label: b.status ?? "Unknown", tone: "muted" };
             const busy = busyId === b.id;
 
             return (
               <tr key={b.id}>
-                <td>{b.id}</td>
+                <td>{((page-1)*limit)+(i+1)}</td>
                 <td>{b.email}</td>
                 <td className="dim">{b.domain ?? "—"}</td>
                 <td className="dim wrap">{b.reason}</td>
@@ -263,11 +350,59 @@ export default function BlockTable({ compact = false, currentUser }) {
         </tbody>
       </table>
 
-      {!compact && rows.length > shown.length && (
-        <div className="pad" style={{ textAlign: "center" }}>
-          <button type="button" className="btn sm" onClick={() => setVisible((n) => n + PAGE_SIZE)}>
-            Show more ({rows.length - shown.length} remaining)
-          </button>
+      {!compact && pagination && (
+        <div
+          role="navigation"
+          aria-label="Blocklist pagination"
+          className="pad"
+          style={{
+            display: "flex",
+            flexWrap: "wrap",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}
+        >
+          <div className="dim" style={{ fontSize: "0.85rem" }} aria-live="polite">
+            Showing {from}–{to} of {total}
+          </div>
+
+          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+            <label htmlFor="bl-limit" className="dim" style={{ fontSize: "0.85rem" }}>
+              Rows per page
+            </label>
+            <select
+              id="bl-limit"
+              className="sel"
+              value={limit}
+              onChange={(e) => {
+                setLimit(Number(e.target.value));
+                setPage(1); // a new page size starts from the first page
+              }}
+            >
+              {LIMITS.map((n) => (
+                <option key={n} value={n}>
+                  {n}
+                </option>
+              ))}
+            </select>
+
+            <button type="button" className="btn sm" disabled={!pagination.hasPrev || loading} onClick={() => setPage(1)} aria-label="First page">
+              «
+            </button>
+            <button type="button" className="btn sm" disabled={!pagination.hasPrev || loading} onClick={() => setPage((n) => n - 1)}>
+              Prev
+            </button>
+            <span className="dim" style={{ fontSize: "0.85rem" }}>
+              Page {pagination.page} of {pagination.totalPages}
+            </span>
+            <button type="button" className="btn sm" disabled={!pagination.hasNext || loading} onClick={() => setPage((n) => n + 1)}>
+              Next
+            </button>
+            <button type="button" className="btn sm" disabled={!pagination.hasNext || loading} onClick={() => setPage(pagination.totalPages)} aria-label="Last page">
+              »
+            </button>
+          </div>
         </div>
       )}
     </div>

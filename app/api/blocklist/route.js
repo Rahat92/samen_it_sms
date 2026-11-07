@@ -5,6 +5,16 @@ import { NextResponse } from "next/server";
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAILS = 100; // keep in sync with the form
 
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+
+// Positive integer from a query param, or the fallback
+const toInt = (value, fallback) => {
+    const n = Number.parseInt(value ?? "", 10);
+    return Number.isInteger(n) && n > 0 ? n : fallback;
+};
+
+// GET /api/blocklist?page=1&limit=20
 export async function GET(request) {
     const session = await getSession();
     if (!session) {
@@ -12,32 +22,42 @@ export async function GET(request) {
     }
 
     try {
-        const isAdmin = ["ADMIN", "SUPERADMIN"].includes(session.role);
+        const { searchParams } = new URL(request.url);
+        const page = toInt(searchParams.get("page"), 1);
+        const limit = Math.min(toInt(searchParams.get("limit"), DEFAULT_LIMIT), MAX_LIMIT);
 
-        const entries = await prisma.blockList.findMany({
-            where: isAdmin ? {status:{
-                not:'UNBLOCKED'
-            }} : { domain: session.domain,status: {
-                not:'UNBLOCKED'
-            }  },
-            orderBy: { createdAt: "desc" },
-            include: {
-                // latest unblock request only
-                unblockRequests: {
-                    orderBy: { createdAt: "desc" },
-                    take: 1,
-                    select: {
-                        id: true,
-                        status: true,      // PENDING | APPROVED | REJECTED
-                        message: true,
-                        reviewNote: true,
-                        reviewedAt: true,
-                        createdAt: true,
-                        requestedBy: { select: { id: true, name: true, email: true } },
+        const isAdmin = ["ADMIN", "SUPERADMIN"].includes(session.role);
+        const where = {
+            status: { not: "UNBLOCKED" },
+            ...(!isAdmin && { domain: session.domain }),
+        };
+
+        const [entries, total] = await prisma.$transaction([
+            prisma.blockList.findMany({
+                where,
+                // id as a tie-breaker so rows never repeat or vanish between pages
+                orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+                skip: (page - 1) * limit,
+                take: limit,
+                include: {
+                    // latest unblock request only
+                    unblockRequests: {
+                        orderBy: { createdAt: "desc" },
+                        take: 1,
+                        select: {
+                            id: true,
+                            status: true, // PENDING | APPROVED | REJECTED
+                            message: true,
+                            reviewNote: true,
+                            reviewedAt: true,
+                            createdAt: true,
+                            requestedBy: { select: { id: true, name: true, email: true } },
+                        },
                     },
                 },
-            },
-        });
+            }),
+            prisma.blockList.count({ where }),
+        ]);
 
         // Flatten: replace the array with a single `unblockRequest` (or null)
         const data = entries.map(({ unblockRequests, ...entry }) => ({
@@ -45,7 +65,18 @@ export async function GET(request) {
             unblockRequest: unblockRequests[0] ?? null,
         }));
 
-        return NextResponse.json({ data });
+        const totalPages = Math.max(1, Math.ceil(total / limit));
+        return NextResponse.json({
+            data,
+            pagination: {
+                page,
+                limit,
+                total,
+                totalPages,
+                hasPrev: page > 1,
+                hasNext: page < totalPages,
+            },
+        });
     } catch (error) {
         console.error("Error fetching blocklist:", error);
         return NextResponse.json({ error: "Failed to fetch blocklist" }, { status: 500 });

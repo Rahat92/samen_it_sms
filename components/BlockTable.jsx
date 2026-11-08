@@ -289,7 +289,7 @@ export default function BlockTable({ compact = false, currentUser }) {
 
             return (
               <tr key={b.id}>
-                <td>{((page-1)*limit)+(i+1)}</td>
+                <td>{((page - 1) * limit) + (i + 1)}</td>
                 <td>{b.email}</td>
                 <td className="dim">{b.domain ?? "—"}</td>
                 <td className="dim wrap">{b.reason}</td>

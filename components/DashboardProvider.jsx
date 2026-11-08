@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import axios from "axios";
 import { rows, INITIAL_BLOCKED, INITIAL_HISTORY } from "@/lib/sample-data";
 import { HOUR, NOW } from "@/lib/format";
 import { addDays } from "./Daterangepicker";
@@ -8,6 +9,7 @@ const fmt = (d) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
 const Ctx = createContext(null);
 export function DashboardProvider({ children }) {
   const [blocked, setBlocked] = useState([]);
+  const [stats, setStats] = useState([])
   useEffect(() => {
     const fetchBlocked = async () => {
       try {
@@ -21,6 +23,8 @@ export function DashboardProvider({ children }) {
     };
     fetchBlocked();
   }, [])
+
+  
   const today = fmt(new Date());
   const [range, setRange] = useState('');
   const [total, setTotal] = useState(null);
@@ -32,13 +36,26 @@ export function DashboardProvider({ children }) {
   const [selectedId, setSelectedId] = useState(null);
   const [toastMsg, setToastMsg] = useState("");
   const toastTimer = useRef(null);
+  const [user, setUser] = useState(null)
   const [customRange, setCustomRange] = useState({ from: addDays(today, -0), to: today });
 
   const scoped = useMemo(() => {
     const from = NOW - range * HOUR;
     return rows.filter((r) => r.createdAt >= from && (tenant === "all" || r.tenant === tenant));
   }, [range, tenant]);
-  console.log(rows)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (user && user.role == 'USER') {
+        const { data } = await axios.get(`/api/stats?tenant=${user.email.split('@')[1]}&timeFrom=${range}&from=${customRange.from}&to=${customRange.to}`)
+        setStats(await data)
+      } else if (user.role == 'ADMIN') {
+        const { data } = await axios.get(`/api/stats?tenant=${tenant === 'all' ? '' : tenant}&timeFrom=${range}&from=${customRange.from}&to=${customRange.to}`)
+        setStats(await data)
+      }
+    }
+    fetchStats()
+  }, [tenant, range, user, customRange])
   const toast = useCallback((msg) => {
     setToastMsg(msg);
     clearTimeout(toastTimer.current);
@@ -46,7 +63,6 @@ export function DashboardProvider({ children }) {
   }, []);
 
   useEffect(() => () => clearTimeout(toastTimer.current), []);
-  console.log("Blocked recipients in provider:", blocked);
   const isBlocked = useCallback(
     (email) => blocked?.data?.some((b) => b.email.toLowerCase() === email.toLowerCase()),
     [blocked]
@@ -75,7 +91,7 @@ export function DashboardProvider({ children }) {
   );
 
   const value = {
-    rows, setRows, graphRows, setGraphRows, q, setQ, total, setTotal, customRange, setCustomRange,
+    rows, setRows, graphRows, setGraphRows, q, setQ, total, setTotal, customRange, setCustomRange, user, setUser, stats, setStats,
     range, setRange, tenant, setTenant, scoped,
     blocked, setBlocked, history, setHistory, isBlocked, addBlock, removeBlock,
     selectedId, openEvent: setSelectedId, closeEvent: () => setSelectedId(null),

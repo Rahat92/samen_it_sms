@@ -70,9 +70,9 @@ export default function UserMenu({
             {user.role && <em>{user.role}</em>}
           </div>
 
-          <Link href={profileHref} className="um-item" role="menuitem" onClick={() => setOpen(false)}>
+          {/* <Link href={profileHref} className="um-item" role="menuitem" onClick={() => setOpen(false)}>
             Profile
-          </Link>
+          </Link> */}
           <button type="button" className="um-item um-danger" role="menuitem" onClick={logout} disabled={busy}>
             {busy ? "Logging out…" : "Log out"}
           </button>

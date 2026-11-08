@@ -18,7 +18,6 @@ export default function DashboardView({ result, sent, currentUser }) {
   const t = totals(scoped);
 
   useEffect(() => {
-    console.log(customRange)
     const fetchStats = async () => {
       if (currentUser && currentUser.role == 'USER') {
         const { data } = await axios.get(`/api/stats?tenant=${currentUser.email.split('@')[1]}&timeFrom=${range}&from=${customRange.from}&to=${customRange.to}`)

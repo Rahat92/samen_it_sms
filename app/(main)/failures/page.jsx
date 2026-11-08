@@ -1,7 +1,9 @@
 import FailuresView from "@/components/views/FailuresView";
+import { getCurrentUser } from "@/lib/auth";
 
 export const metadata = { title: "Failures" };
 
-export default function Page() {
-  return <FailuresView />;
+export default async function Page() {
+  const user = await getCurrentUser();
+  return <FailuresView currentUser = {user} />;
 }

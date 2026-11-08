@@ -6,19 +6,26 @@ import Pill from "../Pill";
 import { useDashboard } from "../DashboardProvider";
 import { CATS, CAT_ORDER } from "@/lib/sample-data";
 import { byCat, totals } from "@/lib/stats";
+import { useEffect, useState } from "react";
 
-export default function FailuresView() {
-  const { scoped } = useDashboard();
+export default function FailuresView({currentUser}) {
+  const { scoped, setUser, stats, setStats } = useDashboard();
+  console.log(stats)
+  const {total, last24h, sent, softFail, hardFail, held} = stats
+  useEffect(() => {
+    setUser(currentUser)
+  }, [currentUser])
+
   const t = totals(scoped);
   const m = byCat(scoped);
   const keys = CAT_ORDER.filter((k) => m[k] > 0).sort((a, b) => m[b] - m[a]);
-
+  
   return (
     <>
       <div className="stats">
-        <div className="stat"><span className="badge red"><Icon name="fail" /></span><small>Soft Failed</small><b>{t.bad}</b></div>
-        <div className="stat"><span className="badge amber"><Icon name="clock" /></span><small>Hard Failed</small><b>{t.delayed}</b></div>
-        <div className="stat"><span className="badge red"><Icon name="block" /></span><small>Pending</small><b>{t.failed}</b></div>
+        <div className="stat"><span className="badge amber"><Icon name="fail" /></span><small>Hard Failed</small><b>{hardFail}</b></div>
+        <div className="stat"><span className="badge red"><Icon name="clock" /></span><small>Soft Failed</small><b>{softFail}</b></div>
+        <div className="stat"><span className="badge red"><Icon name="block" /></span><small>Pending</small><b>{held}</b></div>
       </div>
 
       {keys.length ? (

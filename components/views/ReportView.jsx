@@ -143,19 +143,19 @@ export default function ReportView({ status, q }) {
 
   return (
     <section className="card">
-      <header>
+      {/* <header>
         <div>
           <h2>Export report</h2>
           <p className="hint">
             Uses the period and tenant selected at the top of the page. Change them there to change what is exported.
           </p>
         </div>
-      </header>
+      </header> */}
 
       <div className="pad">
         <dl
           aria-label="Filters applied to this report"
-          style={{ display: "flex", flexWrap: "wrap", gap: "8px 28px", margin: "0 0 20px" }}
+          style={{ display: "flex", flexWrap: "wrap", gap: "8px 28px", margin: "0 0 0" }}
         >
           {filters.map((f) => (
             <div key={f.label}>

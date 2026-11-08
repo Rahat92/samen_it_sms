@@ -278,7 +278,7 @@ export default function UsersView({ currentUserId }) {
                     <p className="hint">{loading ? "Loading…" : `${users.length} in total`}</p>
                 </div>
                 <div className="flex gap-1" style={{ alignItems: "center" }}>
-                    <div className="select-wrap">
+                    {/* <div className="select-wrap">
                         <label htmlFor="userSearch" className="sr-only">Search users</label>
                         <input
                             id="userSearch"
@@ -288,7 +288,7 @@ export default function UsersView({ currentUserId }) {
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
                         />
-                    </div>
+                    </div> */}
                     <button type="button" className="btn sm" onClick={addTenant} disabled={adding}>
                         {adding ? "Adding…" : "Add tenant"}
                     </button>

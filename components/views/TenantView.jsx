@@ -52,6 +52,7 @@ export default function UsersView({ currentUserId }) {
     const [loading, setLoading] = useState(true);
     const [loadError, setLoadError] = useState("");
     const [busyId, setBusyId] = useState(null);
+    const [adding, setAdding] = useState(false);
     const requestId = useRef(0);
 
     const load = useCallback(async (term) => {
@@ -123,6 +124,92 @@ export default function UsersView({ currentUserId }) {
         }
     }
 
+    // Create a tenant. Leave the password blank to have one generated and emailed to the tenant.
+    async function addTenant() {
+        if (adding) return;
+
+        const field = (id, label, attrs = "") => `
+            <label for="${id}" style="display:block;font-size:13px;text-align:left;margin-top:12px">${label}</label>
+            <input id="${id}" class="swal2-input" style="margin:4px 0 0;width:100%;box-sizing:border-box" ${attrs}>`;
+
+        const { isConfirmed, value } = await Swal.fire({
+            title: "Add tenant",
+            width: 440,
+            html: `
+                ${field("tn-name", "Tenant name", 'autocomplete="off" placeholder="Midway Securities Ltd."')}
+                ${field("tn-email", "Email (receives the login details)", 'type="email" autocomplete="off" placeholder="portfolio@midwaybd.com"')}
+                ${field("tn-domain", "Domain", 'autocomplete="off" placeholder="Defaults to the email domain"')}
+                ${field("tn-password", "Password", 'type="password" autocomplete="new-password" placeholder="Leave blank to auto-generate"')}
+                <label style="display:flex;gap:8px;align-items:center;font-size:13px;text-align:left;margin-top:14px">
+                    <input id="tn-send" type="checkbox" checked> Email the login details to the tenant
+                </label>
+                <p style="font-size:12px;opacity:.7;text-align:left;margin:6px 0 0">
+                    An auto-generated password is always emailed.
+                </p>`,
+            focusConfirm: false,
+            showCancelButton: true,
+            confirmButtonText: "Create tenant",
+            preConfirm: () => {
+                const get = (id) => document.getElementById(id).value.trim();
+                const name = get("tn-name");
+                const email = get("tn-email").toLowerCase();
+                const password = document.getElementById("tn-password").value;
+                if (!name) return Swal.showValidationMessage("Tenant name is required");
+                if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
+                    return Swal.showValidationMessage("Enter a valid email address");
+                if (password && password.length < 8)
+                    return Swal.showValidationMessage("Password must be at least 8 characters");
+                return {
+                    name,
+                    email,
+                    domain: get("tn-domain").toLowerCase() || email.split("@")[1],
+                    password,
+                    sendEmail: document.getElementById("tn-send").checked,
+                };
+            },
+        });
+        if (!isConfirmed || !value) return;
+
+        setAdding(true);
+        try {
+            const body = new FormData();
+            body.set("name", value.name);
+            body.set("email", value.email);
+            body.set("domain", value.domain);
+            body.set("sendEmail", String(value.sendEmail));
+            if (value.password) {
+                body.set("password", value.password);
+                body.set("passwordConfirm", value.password);
+            }
+
+            const result = await api("/api/users", { method: "POST", body });
+            const { emailSent, generatedPassword, ...created } = result;
+            setUsers((prev) => [created, ...prev]);
+
+            if (emailSent) {
+                notify("success", "Tenant added", `Login details were emailed to ${created.email}`);
+            } else if (generatedPassword) {
+                // Email failed: show the generated password once so the admin can pass it on
+                await Swal.fire({
+                    icon: "warning",
+                    title: "Tenant added, email not sent",
+                    text: `We couldn't email ${created.email}. Share this temporary password with them yourself; it won't be shown again.`,
+                    input: "text",
+                    inputValue: generatedPassword,
+                    inputAttributes: { readonly: true },
+                    confirmButtonText: "Copy & close",
+                    preConfirm: () => navigator.clipboard?.writeText(generatedPassword).catch(() => {}),
+                });
+            } else {
+                notify("success", "Tenant added");
+            }
+        } catch (err) {
+            notify("error", "Couldn't add tenant", err.message);
+        } finally {
+            setAdding(false);
+        }
+    }
+
     async function changeRole(u) {
         const options = Object.fromEntries(
             Object.entries(ROLES)
@@ -190,16 +277,21 @@ export default function UsersView({ currentUserId }) {
                     <h2>Users</h2>
                     <p className="hint">{loading ? "Loading…" : `${users.length} in total`}</p>
                 </div>
-                <div className="select-wrap">
-                    <label htmlFor="userSearch" className="sr-only">Search users</label>
-                    <input
-                        id="userSearch"
-                        type="search"
-                        placeholder="Search name or email"
-                        autoComplete="off"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
+                <div className="flex gap-1" style={{ alignItems: "center" }}>
+                    <div className="select-wrap">
+                        <label htmlFor="userSearch" className="sr-only">Search users</label>
+                        <input
+                            id="userSearch"
+                            type="search"
+                            placeholder="Search name or email"
+                            autoComplete="off"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
+                    <button type="button" className="btn sm" onClick={addTenant} disabled={adding}>
+                        {adding ? "Adding…" : "Add tenant"}
+                    </button>
                 </div>
             </header>
 

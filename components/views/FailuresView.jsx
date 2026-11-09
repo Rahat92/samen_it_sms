@@ -22,7 +22,7 @@ export default function FailuresView({currentUser}) {
   
   return (
     <>
-      <div className="stats">
+      <div className="stats failure_stats">
         <div className="stat"><span className="badge amber"><Icon name="fail" /></span><small>Hard Failed</small><b>{hardFail}</b></div>
         <div className="stat"><span className="badge red"><Icon name="clock" /></span><small>Soft Failed</small><b>{softFail}</b></div>
         <div className="stat"><span className="badge red"><Icon name="block" /></span><small>Pending</small><b>{held}</b></div>

@@ -7,7 +7,7 @@ import TxTable from "../TxTable";
 import { useDashboard } from "../DashboardProvider";
 import { CATS, CAT_ORDER } from "@/lib/sample-data";
 
-const STATUSES = ["All", "Sent", "HardFail", "Held"];
+const STATUSES = ["All", "Sent", "HardFail", "SoftFail", "Held"];
 const PAGE = 12;
 
 export default function TransactionsView({currentUser}) {

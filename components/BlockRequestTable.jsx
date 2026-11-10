@@ -12,16 +12,8 @@ const PAGE_SIZE = 50;
 // Status of an individual unblock request (UnblockRequest.status)
 const STATUS = {
   PENDING: { label: "Pending", tone: "warning" },
-  APPROVED: { label: "Approved", tone: "success" },
   REJECTED: { label: "Rejected", tone: "danger" },
 };
-
-const FILTERS = [
-  { key: "ALL", label: "All" },
-  { key: "PENDING", label: "Pending" },
-  { key: "APPROVED", label: "Approved" },
-  { key: "REJECTED", label: "Rejected" },
-];
 
 const isAdminRole = (role) => role === "ADMIN" || role === "SUPERADMIN";
 const clip = (s, n) => (s && s.length > n ? `${s.slice(0, n - 1)}…` : s);
@@ -37,7 +29,6 @@ export default function BlockRequestTable({ compact = false, currentUser }) {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState(null);
   const [busyId, setBusyId] = useState(null);
-  const [filter, setFilter] = useState(isAdmin ? "PENDING" : "ALL");
   const [query, setQuery] = useState("");
 
   // ---------- load ----------
@@ -75,47 +66,51 @@ export default function BlockRequestTable({ compact = false, currentUser }) {
   }, [load]);
 
   // ---------- derived data ----------
-  const counts = useMemo(() => {
-    const c = { ALL: requests.length, PENDING: 0, APPROVED: 0, REJECTED: 0 };
-    for (const r of requests) if (c[r.status] !== undefined) c[r.status] += 1;
-    return c;
-  }, [requests]);
-
+  // Approved requests are deleted with their blocklist entry, so there are no
+  // status tabs: everything left is shown, pending first, newest first.
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return requests.filter((r) => {
-      if (filter !== "ALL" && r.status !== filter) return false;
-      if (!q) return true;
-      return [
-        r.blockList?.email,
-        r.blockList?.domain,
-        r.blockList?.reason,
-        r.requestedBy?.name,
-        r.requestedBy?.email,
-        r.message,
-      ].some((v) => v && String(v).toLowerCase().includes(q));
+    const list = q
+      ? requests.filter((r) =>
+          [
+            r.blockList?.email,
+            r.blockList?.domain,
+            r.blockList?.reason,
+            r.requestedBy?.name,
+            r.requestedBy?.email,
+            r.message,
+          ].some((v) => v && String(v).toLowerCase().includes(q))
+        )
+      : requests;
+
+    return [...list].sort((a, b) => {
+      const ap = a.status === "PENDING" ? 0 : 1;
+      const bp = b.status === "PENDING" ? 0 : 1;
+      if (ap !== bp) return ap - bp;
+      return new Date(b.createdAt) - new Date(a.createdAt);
     });
-  }, [requests, filter, query]);
+  }, [requests, query]);
 
   const shown = visible.slice(0, compact ? 3 : PAGE_SIZE);
 
   // ---------- review ----------
-  // Update one row locally after a successful review (no refetch needed)
+  // Update the list locally after a successful review (no refetch needed)
   const applyReview = useCallback(
     (id, updated, status) => {
       setRequests((prev) =>
-        prev.map((r) =>
-          r.id === id
-            ? {
-                ...r,
-                status,
-                reviewNote: updated.reviewNote ?? null,
-                reviewedAt: updated.reviewedAt ?? new Date().toISOString(),
-                reviewedBy: currentUser ? { id: currentUser.id, name: currentUser.name } : r.reviewedBy,
-                blockList: { ...r.blockList, status: status === "APPROVED" ? "UNBLOCKED" : "BLOCKED" },
-              }
-            : r
-        )
+        status === "APPROVED"
+          ? prev.filter((r) => r.id !== id) // blocklist entry is deleted, so the row goes away
+          : prev.map((r) =>
+              r.id === id
+                ? {
+                    ...r,
+                    status,
+                    reviewNote: updated.reviewNote ?? null,
+                    reviewedAt: updated.reviewedAt ?? new Date().toISOString(),
+                    reviewedBy: currentUser ? { id: currentUser.id, name: currentUser.name } : r.reviewedBy,
+                  }
+                : r
+            )
       );
     },
     [currentUser]
@@ -148,8 +143,14 @@ export default function BlockRequestTable({ compact = false, currentUser }) {
         throw new Error(message);
       }
 
-      const result = await response.json();
-      const updated = result.data?.request ?? result.data ?? {};
+      // The approve response may have no body details once the entry is deleted
+      let updated = {};
+      try {
+        const result = await response.json();
+        updated = result.data?.request ?? result.data ?? {};
+      } catch {
+        /* empty body is fine */
+      }
       applyReview(r.id, updated, status);
       notifyChanged();
       toast(
@@ -174,7 +175,7 @@ export default function BlockRequestTable({ compact = false, currentUser }) {
     const { isConfirmed } = await Swal.fire({
       icon: "question",
       title: "Approve unblock request?",
-      text: `${r.blockList?.email} will be unblocked and able to receive mail again.`,
+      text: `${r.blockList?.email} will be removed from the blocklist and able to receive mail again.`,
       showCancelButton: true,
       confirmButtonText: "Yes, approve",
       focusCancel: true,
@@ -220,47 +221,15 @@ export default function BlockRequestTable({ compact = false, currentUser }) {
   if (!requests.length) {
     return (
       <div className="empty">
-        {isAdmin ? "No unblock requests yet." : "You haven't requested any unblocks yet."}
+        {isAdmin ? "No unblock requests." : "You haven't requested any unblocks yet."}
       </div>
     );
   }
-
-  const filtersActive = filter !== "ALL" || query.trim() !== "";
 
   return (
     <div>
       {!compact && (
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div role="tablist" aria-label="Filter by status" className="flex flex-wrap gap-1.5">
-            {FILTERS.map((f) => {
-              const active = filter === f.key;
-              return (
-                <button
-                  key={f.key}
-                  type="button"
-                  role="tab"
-                  aria-selected={active}
-                  onClick={() => setFilter(f.key)}
-                  className={
-                    "inline-flex items-center rounded-full px-3 py-1 text-sm font-medium transition focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 " +
-                    (active
-                      ? "bg-indigo-600 text-white"
-                      : "border border-slate-300 bg-transparent hover:bg-slate-500/10")
-                  }
-                >
-                  {f.label}
-                  <span
-                    className={
-                      "ml-1.5 rounded-full px-1.5 text-xs " + (active ? "bg-white/25" : "bg-slate-500/15")
-                    }
-                  >
-                    {counts[f.key]}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
           <div className="ml-auto flex items-center gap-2">
             <label htmlFor="req-search" className="sr-only">
               Search requests
@@ -288,22 +257,10 @@ export default function BlockRequestTable({ compact = false, currentUser }) {
 
       {!shown.length ? (
         <div className="empty">
-          No requests match your filters.
-          {filtersActive && (
-            <>
-              {" "}
-              <button
-                type="button"
-                className="btn sm"
-                onClick={() => {
-                  setFilter("ALL");
-                  setQuery("");
-                }}
-              >
-                Clear filters
-              </button>
-            </>
-          )}
+          No requests match your search.{" "}
+          <button type="button" className="btn sm" onClick={() => setQuery("")}>
+            Clear search
+          </button>
         </div>
       ) : (
         <div className="tablewrap">

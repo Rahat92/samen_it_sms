@@ -117,9 +117,9 @@ export async function PATCH(request, { params }) {
             if (count === 0) return { error: "ALREADY_REVIEWED", current: existing.status };
  
             const updatedRequest = await tx.unblockRequest.findUnique({ where: { id: requestId } });
-            const blockList = await tx.blockList.update({
+            const blockList = await tx.blockList.delete({
                 where: { id: existing.blockListId },
-                data: { status: approved ? "UNBLOCKED" : "BLOCKED" },
+                // data: { status: approved ? "UNBLOCKED" : "BLOCKED" },
             });
             return { request: updatedRequest, blockList };
         });

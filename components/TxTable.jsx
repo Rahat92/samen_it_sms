@@ -35,7 +35,7 @@ export default function TxTable({ limit, status, compact = false, q, currentUser
           status: !status || status === "All" ? "" : status,
           tenant:
             currentUser.role === "USER"
-              ? currentUser.email.split("@")[1]
+              ? currentUser.domain
               : tenant === "all"
                 ? ""
                 : tenant,

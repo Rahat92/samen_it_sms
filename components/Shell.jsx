@@ -116,7 +116,7 @@ export default function Shell({ children, currentUser }) {
   useEffect(() => {
     if (!currentUser) return;
     if (currentUser.role === "USER") {
-      setTenant(currentUser.email.split("@")[1]);
+      setTenant(currentUser.domain);
     } else if (currentUser.role === "ADMIN") {
       setTenant("all");
     }
@@ -169,7 +169,7 @@ export default function Shell({ children, currentUser }) {
   useEffect(() => {
     const fetchTenants = async () => {
       const res = await fetch(`/api/users`)
-      
+
       const users = await res.json()
       setTenants(users)
     }
@@ -179,9 +179,9 @@ export default function Shell({ children, currentUser }) {
 
   const badgeFor = (href) =>
     href === "/failures" ? badCount
-    : href === "/blocklist" ? blockedCount
-    : href === "/unblock-requests" ? pendingCount
-    : 0;
+      : href === "/blocklist" ? blockedCount
+        : href === "/unblock-requests" ? pendingCount
+          : 0;
   const renderCount = (c) => (c > 0 ? <span className="count">{c > 99 ? "99+" : c}</span> : null);
 
   const isGroupOpen = (g) => openGroups[g.label] ?? g.children.some((c) => c === current);
@@ -324,13 +324,13 @@ export default function Shell({ children, currentUser }) {
                 //   <option key={k} value={t.domain}>{t.name}</option>
                 // ))
                 tenants?.filter((item) => item.domain).map((i) => {
-                  return(
+                  return (
                     <option key={i.id ?? i.domain} value={i.domain}>{i.name}</option>
                   )
                 })
               ) : (
                 currentUser && (
-                  <option value={currentUser.email.split("@")[1]}>{currentUser.name}</option>
+                  <option value={currentUser.domain}>{currentUser.name}</option>
                 )
               )}
             </select>

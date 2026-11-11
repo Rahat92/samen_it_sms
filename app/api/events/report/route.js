@@ -26,7 +26,7 @@ export async function GET(request) {
         const isAdmin = ["ADMIN", "SUPERADMIN"].includes(session.role);
         const tenant = isAdmin
             ? searchParams.get("tenant") || "all"
-            : session.domain ?? session.email?.split("@")[1];
+            : session.domain ?? session.domain;
         if (!tenant) return bad("Forbidden", 403);
 
         // Custom date range wins over "last N hours", same as getEvents

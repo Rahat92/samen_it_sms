@@ -20,7 +20,7 @@ export default function DashboardView({ result, sent, currentUser }) {
   useEffect(() => {
     const fetchStats = async () => {
       if (currentUser && currentUser.role == 'USER') {
-        const { data } = await axios.get(`/api/stats?tenant=${currentUser.email.split('@')[1]}&timeFrom=${range}&from=${customRange.from}&to=${customRange.to}`)
+        const { data } = await axios.get(`/api/stats?tenant=${currentUser.domain}&timeFrom=${range}&from=${customRange.from}&to=${customRange.to}`)
         setStats(await data)
       } else if (currentUser.role == 'ADMIN') {
         const { data } = await axios.get(`/api/stats?tenant=${tenant==='all'?'':tenant}&timeFrom=${range}&from=${customRange.from}&to=${customRange.to}`)

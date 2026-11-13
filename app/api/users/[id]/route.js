@@ -1,10 +1,15 @@
-import { NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+// Replace the PATCH export in app/api/users/[id]/route.js with this one (keep your DELETE as it is).
 import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth";
-import fs from "fs/promises";
-import path from "path";
-import crypto from "crypto";
+import { getSession } from "@/lib/session";
+import { NextResponse } from "next/server";
+import { generatePassword } from "@/lib/password";
+import { sendPasswordResetEmail } from "@/lib/mailer";
+
+const ROLES = ["SUPERADMIN", "ADMIN", "USER"];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const bad = (error, status = 400) => NextResponse.json({ error }, { status });
 export async function PUT(request, { params }) {
   let uploadedFile = null;
   try {
@@ -162,44 +167,98 @@ export async function PUT(request, { params }) {
   }
 }
 
-// update user status (active/inactive)
 export async function PATCH(request, { params }) {
-  console.log("PATCH request received for user status update");
-  try {
-    const { id } = await params;
-    const userId = Number(id);  
-    await requireRole("ADMIN");
+    const { response } = await requireRole("ADMIN");
+    if (response) return response;
 
-    if (!Number.isInteger(userId) || userId <= 0) {
-      return NextResponse.json(
-        { error: "Invalid user ID" },
-        { status: 400 }
-      );
-    } else {
-      const existingUser = await prisma.user.findUnique({
-        where: { id: userId },
-      });
-      if (!existingUser) {
-        return NextResponse.json(
-          { error: "User not found" },
-          { status: 404 }
-        );
-      }else {
-        const updatedUser = await prisma.user.update({
-          where: { id: userId },
-          data: { isActive: !existingUser.isActive },
-          omit: { password: true },
+    const { id } = await params;
+    const userId = Number(id);
+    if (!Number.isInteger(userId)) return bad("Invalid id");
+
+    try {
+        const body = await request.json().catch(() => ({}));
+        const data = {};
+
+        if ("name" in body) {
+            const name = String(body.name ?? "").trim();
+            if (!name) return bad("Name is required");
+            data.name = name;
+        }
+        if ("email" in body) {
+            const email = String(body.email ?? "").trim().toLowerCase();
+            if (!EMAIL_RE.test(email)) return bad("Enter a valid email address");
+            data.email = email;
+        }
+        if ("domain" in body) {
+            data.domain = String(body.domain ?? "").trim().toLowerCase() || null;
+        }
+        if ("role" in body) {
+            if (!ROLES.includes(body.role)) return bad("Invalid role");
+            data.role = body.role;
+        }
+        if ("isActive" in body) {
+            if (typeof body.isActive !== "boolean") return bad("isActive must be true or false");
+            data.isActive = body.isActive;
+        }
+
+        // Password: typed by the admin, or generated here
+        let newPassword = null;
+        let generated = false;
+        if (body.generatePassword === true) {
+            newPassword = generatePassword();
+            generated = true;
+        } else if (body.password) {
+            newPassword = String(body.password);
+            if (newPassword.length < 8) return bad("Password must be at least 8 characters");
+        }
+        if (newPassword) data.password = await bcrypt.hash(newPassword, 12);
+
+        if (!Object.keys(data).length) return bad("Nothing to update");
+
+        const target = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
+        if (!target) return bad("User not found", 404);
+
+        const session = await getSession();
+        const selfId = session?.id ?? session?.userId;
+
+        // Nobody can lock themselves out of the admin area
+        if (selfId === userId && ("role" in data || data.isActive === false)) {
+            return bad("You can't change your own role or deactivate your own account", 403);
+        }
+        // Only a super admin can grant, or change, the super admin role
+        if ((data.role === "SUPERADMIN" || target.role === "SUPERADMIN") && session?.role !== "SUPERADMIN") {
+            return bad("Only a super admin can grant or change the super admin role", 403);
+        }
+
+        const user = await prisma.user.update({
+            where: { id: userId },
+            data,
+            omit: { password: true },
         });
-        return NextResponse.json(updatedUser);
-      }
+
+        // Email the new password: always when generated, otherwise only if the admin asked
+        let emailSent = false;
+        if (newPassword && (generated || body.sendEmail === true)) {
+            try {
+                await sendPasswordResetEmail({ to: user.email, name: user.name, password: newPassword });
+                emailSent = true;
+            } catch (err) {
+                console.error("Failed to send password email to", user.email, "-", err.message); // never log the password
+            }
+        }
+
+        return NextResponse.json({
+            data: user,
+            emailSent,
+            // Only if a generated password couldn't be emailed: shown once so the admin can pass it on
+            ...(generated && !emailSent && { generatedPassword: newPassword }),
+        });
+    } catch (error) {
+        if (error.code === "P2002") return bad("Email already exists", 409);
+        if (error.code === "P2025") return bad("User not found", 404);
+        console.error("Error updating user:", error);
+        return bad("Failed to update user", 500);
     }
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json(
-      { error: "Failed to update user status" },
-      { status: 500 }
-    );
-  }
 }
 
 // change user role

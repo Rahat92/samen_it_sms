@@ -5,12 +5,15 @@ import Swal from "sweetalert2";
 import { formatDateTime } from "@/lib/format";
 
 const ROLES = {
-    SUPER_ADMIN: { label: "Super admin", tone: "danger" },
+    SUPERADMIN: { label: "Super admin", tone: "danger" },
     ADMIN: { label: "Admin", tone: "warning" },
     USER: { label: "User", tone: "muted" },
 };
 
 const REQUEST_TIMEOUT_MS = 10000;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const escapeHtml = (v) =>
+    String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
 // Shared request helper: timeout, network errors and readable server messages.
 async function api(url, options = {}) {
@@ -106,22 +109,18 @@ export default function UsersView({ currentUserId }) {
             setBusyId(null);
         }
     }
-    async function updateRole(u, changes, successMessage) {
-        if (busyId) return;
-        setBusyId(u.id);
-        try {
-            const result = await api(`/api/users/${encodeURIComponent(u.id)}`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(changes),
-            });
-            setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, ...result.data } : x)));
-            notify("success", successMessage);
-        } catch (err) {
-            notify("error", "Couldn't update user", err.message);
-        } finally {
-            setBusyId(null);
-        }
+    // Shown when a generated password couldn't be emailed: the admin must pass it on by hand
+    function showPasswordOnce(email, password) {
+        return Swal.fire({
+            icon: "warning",
+            title: "Saved, but the email was not sent",
+            text: `We couldn't email ${email}. Share this password with them yourself; it won't be shown again.`,
+            input: "text",
+            inputValue: password,
+            inputAttributes: { readonly: true },
+            confirmButtonText: "Copy & close",
+            preConfirm: () => navigator.clipboard?.writeText(password).catch(() => {}),
+        });
     }
 
     // Create a tenant. Leave the password blank to have one generated and emailed to the tenant.
@@ -190,16 +189,7 @@ export default function UsersView({ currentUserId }) {
                 notify("success", "Tenant added", `Login details were emailed to ${created.email}`);
             } else if (generatedPassword) {
                 // Email failed: show the generated password once so the admin can pass it on
-                await Swal.fire({
-                    icon: "warning",
-                    title: "Tenant added, email not sent",
-                    text: `We couldn't email ${created.email}. Share this temporary password with them yourself; it won't be shown again.`,
-                    input: "text",
-                    inputValue: generatedPassword,
-                    inputAttributes: { readonly: true },
-                    confirmButtonText: "Copy & close",
-                    preConfirm: () => navigator.clipboard?.writeText(generatedPassword).catch(() => {}),
-                });
+                await showPasswordOnce(created.email, generatedPassword);
             } else {
                 notify("success", "Tenant added");
             }
@@ -210,24 +200,109 @@ export default function UsersView({ currentUserId }) {
         }
     }
 
-    async function changeRole(u) {
-        const options = Object.fromEntries(
-            Object.entries(ROLES)
-                .filter(([key]) => key !== u.role)
-                .map(([key, value]) => [key, value.label])
-        );
+    // Edit everything about a user: name, email, domain, role, active, and a new password.
+    async function editUser(u) {
+        if (busyId) return;
+        const isSelf = u.id === currentUserId;
 
-        const { isConfirmed, value } = await Swal.fire({
-            title: "Change role",
-            text: u.email,
-            input: "select",
-            inputOptions: options,
-            inputPlaceholder: "Select a new role",
+        const label = (text, forId) =>
+            `<label for="${forId}" style="display:block;font-size:13px;text-align:left;margin-top:12px">${text}</label>`;
+        const input = (id, text, value, attrs = "") =>
+            `${label(text, id)}<input id="${id}" class="swal2-input" value="${escapeHtml(value)}" style="margin:4px 0 0;width:100%;box-sizing:border-box" ${attrs}>`;
+        const check = (id, text, checked, disabled = false) =>
+            `<label style="display:flex;gap:8px;align-items:center;font-size:13px;text-align:left;margin-top:12px">
+                <input id="${id}" type="checkbox" ${checked ? "checked" : ""} ${disabled ? "disabled" : ""}> ${text}
+            </label>`;
+        const roleOptions = Object.entries(ROLES)
+            .map(([key, r]) => `<option value="${key}"${key === u.role ? " selected" : ""}>${r.label}</option>`)
+            .join("");
+
+        const { isConfirmed, value: changes } = await Swal.fire({
+            title: "Edit user",
+            width: 460,
+            html: `
+                ${input("eu-name", "Name", u.name, 'autocomplete="off"')}
+                ${input("eu-email", "Email", u.email, 'type="email" autocomplete="off"')}
+                ${input("eu-domain", "Domain", u.domain, 'autocomplete="off" placeholder="e.g. midwaybd.com"')}
+                ${label("Role", "eu-role")}
+                <select id="eu-role" class="swal2-select" style="margin:4px 0 0;width:100%;box-sizing:border-box" ${isSelf ? "disabled" : ""}>${roleOptions}</select>
+                ${check("eu-active", "Active (can sign in)", u.isActive === true, isSelf)}
+                ${isSelf ? '<p style="font-size:12px;opacity:.7;text-align:left;margin:6px 0 0">You can\'t change your own role or deactivate yourself.</p>' : ""}
+                <hr style="margin:16px 0 0;opacity:.25">
+                ${input("eu-password", "New password", "", 'type="password" autocomplete="new-password" placeholder="Leave blank to keep the current password"')}
+                ${check("eu-gen", "Generate a random password instead", false)}
+                ${check("eu-send", "Email the new password to the user", true)}
+                <p style="font-size:12px;opacity:.7;text-align:left;margin:6px 0 0">A generated password is always emailed.</p>`,
+            focusConfirm: false,
             showCancelButton: true,
-            confirmButtonText: "Save",
-            inputValidator: (v) => (v ? undefined : "Please choose a role."),
+            confirmButtonText: "Save changes",
+            didOpen: () => {
+                const gen = document.getElementById("eu-gen");
+                const pw = document.getElementById("eu-password");
+                gen.addEventListener("change", () => {
+                    pw.disabled = gen.checked;
+                    if (gen.checked) pw.value = "";
+                });
+            },
+            preConfirm: () => {
+                const get = (id) => document.getElementById(id).value.trim();
+                const name = get("eu-name");
+                const email = get("eu-email").toLowerCase();
+                const domain = get("eu-domain").toLowerCase();
+                const role = document.getElementById("eu-role").value;
+                const isActive = document.getElementById("eu-active").checked;
+                const password = document.getElementById("eu-password").value;
+                const generate = document.getElementById("eu-gen").checked;
+                const sendEmail = document.getElementById("eu-send").checked;
+
+                if (!name) return Swal.showValidationMessage("Name is required");
+                if (!EMAIL_RE.test(email)) return Swal.showValidationMessage("Enter a valid email address");
+                if (!generate && password && password.length < 8)
+                    return Swal.showValidationMessage("Password must be at least 8 characters");
+
+                // Send only what changed
+                const changes = {};
+                if (name !== (u.name ?? "")) changes.name = name;
+                if (email !== u.email) changes.email = email;
+                if (domain !== (u.domain ?? "")) changes.domain = domain || null;
+                if (!isSelf && role !== u.role) changes.role = role;
+                if (!isSelf && isActive !== (u.isActive === true)) changes.isActive = isActive;
+                if (generate) changes.generatePassword = true;
+                else if (password) {
+                    changes.password = password;
+                    changes.sendEmail = sendEmail;
+                }
+                if (!Object.keys(changes).length) return Swal.showValidationMessage("No changes to save");
+                return changes;
+            },
         });
-        if (isConfirmed && value) await updateRole(u, { role: value }, `Role changed to ${ROLES[value].label}`);
+        if (!isConfirmed || !changes) return;
+
+        setBusyId(u.id);
+        try {
+            const result = await api(`/api/users/${encodeURIComponent(u.id)}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(changes),
+            });
+            setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, ...result.data } : x)));
+
+            const passwordChanged = changes.generatePassword || changes.password;
+            const wantedEmail = changes.generatePassword || changes.sendEmail;
+            if (changes.generatePassword && !result.emailSent && result.generatedPassword) {
+                await showPasswordOnce(result.data.email, result.generatedPassword);
+            } else if (wantedEmail && !result.emailSent) {
+                notify("warning", "User updated", "The new password couldn't be emailed.");
+            } else if (passwordChanged && result.emailSent) {
+                notify("success", "User updated", `The new password was emailed to ${result.data.email}`);
+            } else {
+                notify("success", "User updated");
+            }
+        } catch (err) {
+            notify("error", "Couldn't update user", err.message);
+        } finally {
+            setBusyId(null);
+        }
     }
 
     async function toggleActive(u) {
@@ -350,11 +425,11 @@ export default function UsersView({ currentUserId }) {
                                                 <button
                                                     type="button"
                                                     className="btn sm"
-                                                    disabled={busy || isSelf}
-                                                    onClick={() => changeRole(u)}
-                                                    aria-label={`Change role for ${u.email}`}
+                                                    disabled={busy}
+                                                    onClick={() => editUser(u)}
+                                                    aria-label={`Edit ${u.email}`}
                                                 >
-                                                    Change role
+                                                    Edit
                                                 </button>
                                                 <button
                                                     type="button"

@@ -13,6 +13,8 @@ const ICONS = {
   tenants: <><circle cx="9" cy="8" r="3.2" /><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1" /><path d="M16 4.8a3.2 3.2 0 0 1 0 6.4M18 14.3a5 5 0 0 1 3 4.7v1" /></>,
   unlock: <><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 7.5-2" /><path d="M12 15v2" /></>,
   review: <><rect x="5" y="4" width="14" height="17" rx="2" /><path d="M9 4h6v3H9z" /><path d="M9 12h6M9 16h4" /></>,
+  // document with a folded corner and a small bar chart: the exportable report
+  report: <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" /><path d="M14 3v5h5" /><path d="M9 17v-2M12 17v-5M15 17v-3" /></>,
 };
 
 export default function Icon({ name }) {

@@ -11,6 +11,8 @@ const ROLES = {
 };
 
 const REQUEST_TIMEOUT_MS = 10000;
+const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
+const PHOTO_MAX_BYTES = 5 * 1024 * 1024; // same limits as the API
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const escapeHtml = (v) =>
     String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -139,6 +141,11 @@ export default function UsersView({ currentUserId }) {
                 ${field("tn-email", "Email (receives the login details)", 'type="email" autocomplete="off" placeholder="portfolio@midwaybd.com"')}
                 ${field("tn-domain", "Domain", 'autocomplete="off" placeholder="Defaults to the email domain"')}
                 ${field("tn-password", "Password", 'type="password" autocomplete="new-password" placeholder="Leave blank to auto-generate"')}
+                <label for="tn-photo" style="display:block;font-size:13px;text-align:left;margin-top:12px">Photo (optional, JPG/PNG/WEBP, max 5 MB)</label>
+                <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+                    <img id="tn-preview" alt="" style="display:none;width:48px;height:48px;border-radius:50%;object-fit:cover;flex:none">
+                    <input id="tn-photo" type="file" accept="image/jpeg,image/png,image/webp" style="font-size:13px;min-width:0">
+                </div>
                 <label style="display:flex;gap:8px;align-items:center;font-size:13px;text-align:left;margin-top:14px">
                     <input id="tn-send" type="checkbox" checked> Email the login details to the tenant
                 </label>
@@ -148,6 +155,23 @@ export default function UsersView({ currentUserId }) {
             focusConfirm: false,
             showCancelButton: true,
             confirmButtonText: "Create tenant",
+            didOpen: () => {
+                // Live preview of the chosen photo
+                const input = document.getElementById("tn-photo");
+                const img = document.getElementById("tn-preview");
+                let objectUrl = null;
+                input.addEventListener("change", () => {
+                    if (objectUrl) URL.revokeObjectURL(objectUrl);
+                    const f = input.files?.[0];
+                    objectUrl = f && PHOTO_TYPES.includes(f.type) ? URL.createObjectURL(f) : null;
+                    img.src = objectUrl ?? "";
+                    img.style.display = objectUrl ? "block" : "none";
+                });
+            },
+            willClose: () => {
+                const src = document.getElementById("tn-preview")?.src;
+                if (src?.startsWith("blob:")) URL.revokeObjectURL(src);
+            },
             preConfirm: () => {
                 const get = (id) => document.getElementById(id).value.trim();
                 const name = get("tn-name");
@@ -158,7 +182,13 @@ export default function UsersView({ currentUserId }) {
                     return Swal.showValidationMessage("Enter a valid email address");
                 if (password && password.length < 8)
                     return Swal.showValidationMessage("Password must be at least 8 characters");
+                const photo = document.getElementById("tn-photo").files?.[0] ?? null;
+                if (photo && !PHOTO_TYPES.includes(photo.type))
+                    return Swal.showValidationMessage("Photo must be a JPG, PNG or WEBP image");
+                if (photo && photo.size > PHOTO_MAX_BYTES)
+                    return Swal.showValidationMessage("Photo must be less than 5 MB");
                 return {
+                    photo,
                     name,
                     email,
                     domain: get("tn-domain").toLowerCase() || email.split("@")[1],
@@ -176,6 +206,7 @@ export default function UsersView({ currentUserId }) {
             body.set("email", value.email);
             body.set("domain", value.domain);
             body.set("sendEmail", String(value.sendEmail));
+            if (value.photo) body.set("photo", value.photo);
             if (value.password) {
                 body.set("password", value.password);
                 body.set("passwordConfirm", value.password);
@@ -217,13 +248,19 @@ export default function UsersView({ currentUserId }) {
             .map(([key, r]) => `<option value="${key}"${key === u.role ? " selected" : ""}>${r.label}</option>`)
             .join("");
 
-        const { isConfirmed, value: changes } = await Swal.fire({
+        const { isConfirmed, value: edit } = await Swal.fire({
             title: "Edit user",
             width: 460,
             html: `
                 ${input("eu-name", "Name", u.name, 'autocomplete="off"')}
                 ${input("eu-email", "Email", u.email, 'type="email" autocomplete="off"')}
                 ${input("eu-domain", "Domain", u.domain, 'autocomplete="off" placeholder="e.g. midwaybd.com"')}
+                <label for="eu-photo" style="display:block;font-size:13px;text-align:left;margin-top:12px">Photo (JPG/PNG/WEBP, max 5 MB)</label>
+                <div style="display:flex;gap:12px;align-items:center;margin-top:4px">
+                    <img id="eu-preview" alt="" src="${escapeHtml(u.photo ?? "")}" style="${u.photo ? "" : "display:none;"}width:48px;height:48px;border-radius:50%;object-fit:cover;flex:none">
+                    <input id="eu-photo" type="file" accept="image/jpeg,image/png,image/webp" style="font-size:13px;min-width:0">
+                </div>
+                ${u.photo ? check("eu-rmphoto", "Remove current photo", false) : ""}
                 ${label("Role", "eu-role")}
                 <select id="eu-role" class="swal2-select" style="margin:4px 0 0;width:100%;box-sizing:border-box" ${isSelf ? "disabled" : ""}>${roleOptions}</select>
                 ${check("eu-active", "Active (can sign in)", u.isActive === true, isSelf)}
@@ -243,6 +280,35 @@ export default function UsersView({ currentUserId }) {
                     pw.disabled = gen.checked;
                     if (gen.checked) pw.value = "";
                 });
+
+                // Photo preview; choosing a new photo and "remove" are mutually exclusive
+                const file = document.getElementById("eu-photo");
+                const img = document.getElementById("eu-preview");
+                const rm = document.getElementById("eu-rmphoto");
+                let objectUrl = null;
+                file.addEventListener("change", () => {
+                    if (objectUrl) URL.revokeObjectURL(objectUrl);
+                    const f = file.files?.[0];
+                    objectUrl = f && PHOTO_TYPES.includes(f.type) ? URL.createObjectURL(f) : null;
+                    img.src = objectUrl ?? u.photo ?? "";
+                    img.style.display = img.getAttribute("src") ? "block" : "none";
+                    if (rm && f) rm.checked = false;
+                });
+                rm?.addEventListener("change", () => {
+                    if (rm.checked) {
+                        file.value = "";
+                        if (objectUrl) URL.revokeObjectURL(objectUrl);
+                        objectUrl = null;
+                        img.style.display = "none";
+                    } else {
+                        img.src = u.photo ?? "";
+                        img.style.display = u.photo ? "block" : "none";
+                    }
+                });
+            },
+            willClose: () => {
+                const src = document.getElementById("eu-preview")?.src;
+                if (src?.startsWith("blob:")) URL.revokeObjectURL(src);
             },
             preConfirm: () => {
                 const get = (id) => document.getElementById(id).value.trim();
@@ -259,6 +325,12 @@ export default function UsersView({ currentUserId }) {
                 if (!EMAIL_RE.test(email)) return Swal.showValidationMessage("Enter a valid email address");
                 if (!generate && password && password.length < 8)
                     return Swal.showValidationMessage("Password must be at least 8 characters");
+                const photo = document.getElementById("eu-photo").files?.[0] ?? null;
+                if (photo && !PHOTO_TYPES.includes(photo.type))
+                    return Swal.showValidationMessage("Photo must be a JPG, PNG or WEBP image");
+                if (photo && photo.size > PHOTO_MAX_BYTES)
+                    return Swal.showValidationMessage("Photo must be less than 5 MB");
+                const removePhoto = document.getElementById("eu-rmphoto")?.checked === true;
 
                 // Send only what changed
                 const changes = {};
@@ -272,19 +344,31 @@ export default function UsersView({ currentUserId }) {
                     changes.password = password;
                     changes.sendEmail = sendEmail;
                 }
-                if (!Object.keys(changes).length) return Swal.showValidationMessage("No changes to save");
-                return changes;
+                if (removePhoto && !photo) changes.removePhoto = true;
+                if (!Object.keys(changes).length && !photo) return Swal.showValidationMessage("No changes to save");
+                return { changes, photo };
             },
         });
-        if (!isConfirmed || !changes) return;
+        if (!isConfirmed || !edit) return;
+        const { changes, photo } = edit;
 
         setBusyId(u.id);
         try {
-            const result = await api(`/api/users/${encodeURIComponent(u.id)}`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(changes),
-            });
+            // A new photo needs multipart form data; everything else stays plain JSON
+            let init;
+            if (photo) {
+                const form = new FormData();
+                form.set("changes", JSON.stringify(changes));
+                form.set("photo", photo);
+                init = { method: "PATCH", body: form };
+            } else {
+                init = {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(changes),
+                };
+            }
+            const result = await api(`/api/users/${encodeURIComponent(u.id)}`, init);
             setUsers((prev) => prev.map((x) => (x.id === u.id ? { ...x, ...result.data } : x)));
 
             const passwordChanged = changes.generatePassword || changes.password;
@@ -402,8 +486,21 @@ export default function UsersView({ currentUserId }) {
                                 return (
                                     <tr key={u.id}>
                                         <td>
-                                            {u.name || "—"}
-                                            {isSelf && <span className="dim"> (you)</span>}
+                                            <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                                                {u.photo ? (
+                                                    <img
+                                                        src={u.photo}
+                                                        alt=""
+                                                        width={28}
+                                                        height={28}
+                                                        style={{ borderRadius: "50%", objectFit: "cover" }}
+                                                    />
+                                                ) : null}
+                                                <span>
+                                                    {u.name || "—"}
+                                                    {isSelf && <span className="dim"> (you)</span>}
+                                                </span>
+                                            </span>
                                         </td>
                                         <td className="dim">{u.email}</td>
                                         <td className="dim">{u.domain || "—"}</td>

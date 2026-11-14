@@ -1,17 +1,17 @@
 import { getSession } from "@/lib/session";
 import { buildCsv, buildPdf } from "@/lib/report";
 import { getEvents } from "@/lib/queries";
-
 // jsPDF needs the Node runtime (not edge) and the report must never be cached
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-// Max rows per export. PDFs are much heavier to render than CSV.
-const LIMITS = { csv: 50000, pdf: 2000 };
+
+// No cap: export every matching message. (2147483647 = the largest value Postgres accepts for LIMIT.)
+const NO_LIMIT = 2147483647;
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const bad = (message, status = 400) => Response.json({ error: message }, { status });
 
-// GET /api/report?format=csv|pdf&status=&event=&q=&tenant=&range=24&from=YYYY-MM-DD&to=YYYY-MM-DD
+// GET /api/events/report?format=csv|pdf&status=&event=&q=&tenant=&range=24&from=YYYY-MM-DD&to=YYYY-MM-DD
 export async function GET(request) {
     const session = await getSession();
     if (!session) return bad("Unauthorized", 401);
@@ -26,7 +26,7 @@ export async function GET(request) {
         const isAdmin = ["ADMIN", "SUPERADMIN"].includes(session.role);
         const tenant = isAdmin
             ? searchParams.get("tenant") || "all"
-            : session.domain ?? session.domain;
+            : session.domain ?? session.email?.split("@")[1];
         if (!tenant) return bad("Forbidden", 403);
 
         // Custom date range wins over "last N hours", same as getEvents
@@ -48,11 +48,10 @@ export async function GET(request) {
         const event = searchParams.get("event") || undefined;
         const q = searchParams.get("q") || undefined;
 
-        const limit = LIMITS[format];
-        const { rows, total } = await getEvents({
+                const { rows, total } = await getEvents({
             q, status, event, tenant, range,
             page: 1,
-            pageSize: limit,
+            pageSize: NO_LIMIT,
         });
         const truncated = total > rows.length;
 

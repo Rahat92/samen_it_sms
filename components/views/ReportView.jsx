@@ -2,12 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useDashboard } from "../DashboardProvider";
-
 const REPORT_API = "/api/events/report";
 const TIMEOUT_MS = 60000; // PDFs can take a while to render
 const FORMATS = [
-  { key: "pdf", label: "PDF", hint: "Formatted report with a summary, up to 2,000 events" },
-  { key: "csv", label: "CSV", hint: "Spreadsheet-friendly data, up to 50,000 events" },
+  { key: "pdf", label: "PDF", hint: "Statistics summary: totals, status breakdown and delivery rate" },
+  { key: "csv", label: "CSV", hint: "Every message as a row, up to 50,000 messages" },
 ];
 
 const dhakaDay = (d) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
@@ -143,19 +142,19 @@ export default function ReportView({ status, q }) {
 
   return (
     <section className="card">
-      {/* <header>
+      <header>
         <div>
           <h2>Export report</h2>
           <p className="hint">
             Uses the period and tenant selected at the top of the page. Change them there to change what is exported.
           </p>
         </div>
-      </header> */}
+      </header>
 
       <div className="pad">
         <dl
           aria-label="Filters applied to this report"
-          style={{ display: "flex", flexWrap: "wrap", gap: "8px 28px", margin: "0 0 0" }}
+          style={{ display: "flex", flexWrap: "wrap", gap: "8px 28px", margin: "0 0 20px" }}
         >
           {filters.map((f) => (
             <div key={f.label}>

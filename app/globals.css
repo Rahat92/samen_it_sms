@@ -50,7 +50,7 @@ body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--f
 }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
-.sr-only { position: absolute; left: -9999px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 svg.ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
 
 .shell { display: grid; grid-template-columns: 240px minmax(0, 1fr); min-height: 100vh; }
@@ -108,6 +108,7 @@ a.stat:hover { border-color: var(--accent); }
 .stat b { font-size: 26px; line-height: 1.1; font-weight: 700; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
 
 .grid-2 { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.grid-1 { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
 .grid-eq { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
 @media (max-width: 1000px) { .grid-2, .grid-eq { grid-template-columns: minmax(0, 1fr); } }
 
@@ -178,8 +179,11 @@ td.wrap { white-space: normal; min-width: 160px; }
 .tfoot { display: flex; flex-wrap: wrap; gap: 8px; justify-content: space-between; align-items: center; padding: 12px 18px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; }
 
 /* blocklist + settings */
-.formrow { display: flex; flex-wrap: wrap; gap: 10px; }
-.formrow input[type="text"] { flex: 1 1 220px; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; }
+.formrow { display: flex; flex-wrap: wrap; gap: 10px; align-items: stretch; }
+.formrow .btn, .formrow input[type="text"] { height: 40px; border-radius: 10px; }
+.formrow input[type="text"] { width: 100%; min-width: 0; background: var(--surface); border: 1px solid var(--line); padding: 0 14px; }
+.formrow input[type="text"]:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent); }
+.reason-other { flex: 1 1 220px; min-width: 0; display: flex; }
 .err { color: var(--bad); font-size: 12.5px; min-height: 18px; }
 .hist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; font-size: 13px; }
 .hist li { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 10px; }
@@ -220,32 +224,32 @@ pre.code { margin: 0; padding: 12px 14px; background: var(--surface-2); border: 
   font: inherit;
   font-size: 14px;
   font-weight: 500;
-  color: #0f172a;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: 10px;
-  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  box-shadow: 0 1px 2px rgba(20, 27, 45, 0.05);
   cursor: pointer;
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
 }
 
-.select-modern[data-empty="true"] { color: #94a3b8; }   /* placeholder tone */
+.select-modern[data-empty="true"] { color: var(--muted); }   /* placeholder tone */
 
-.select-modern:hover:not(:disabled) { border-color: #cbd5e1; }
+.select-modern:hover:not(:disabled) { border-color: var(--muted); }
 
 .select-modern:focus-visible {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.15);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .select-modern:disabled {
-  background: #f8fafc;
-  color: #94a3b8;
+  background: var(--surface-2);
+  color: var(--muted);
   cursor: not-allowed;
 }
 
-.select-modern option { color: #0f172a; }
+.select-modern option { color: var(--ink); background: var(--surface); }
 
 .select-chevron {
   position: absolute;
@@ -253,13 +257,13 @@ pre.code { margin: 0; padding: 12px 14px; background: var(--surface-2); border: 
   top: 50%;
   width: 18px;
   height: 18px;
-  color: #64748b;
+  color: var(--muted);
   transform: translateY(-50%);
   pointer-events: none;              /* clicks pass through to the select */
   transition: transform 0.15s, color 0.15s;
 }
 
 .select-wrap:focus-within .select-chevron {
-  color: #6366f1;
+  color: var(--accent);
   transform: translateY(-50%) rotate(180deg);
 }

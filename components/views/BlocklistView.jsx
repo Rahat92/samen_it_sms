@@ -116,6 +116,7 @@ export default function BlocklistView({ currentUser }) {
   const [submitting, setSubmitting] = useState(false);
   const inFlight = useRef(false); // guards against double submits before state updates
 
+  const isAdmin = ["ADMIN", "SUPERADMIN"].includes(currentUser?.role); // super admins manage the blocklist too
   const errorId = error ? "blockEmailError" : undefined;
   const parsed = parseEmails([...emails, draft].join(" "));
   const clearError = () => error && setError("");
@@ -262,7 +263,7 @@ export default function BlocklistView({ currentUser }) {
   return (
     <>
       <section className="card">
-        {currentUser?.role === "ADMIN" && (
+        {isAdmin && (
           <header>
             <div>
               <h2>Add recipients</h2>
@@ -270,7 +271,7 @@ export default function BlocklistView({ currentUser }) {
             </div>
           </header>
         )}
-        {currentUser?.role === "ADMIN" && (
+        {isAdmin && (
           <div className="pad">
             <form onSubmit={submit} noValidate style={{ display: "flex", flexDirection: "column", gap: 14 }}>
               <EmailChipsInput

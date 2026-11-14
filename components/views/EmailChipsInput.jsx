@@ -108,17 +108,17 @@ export default function EmailChipsInput({
   }
 
   return (
-    <div className="chips">
-      <div className="chips-head">
-        <label htmlFor={id} className="chips-label">{label}</label>
-        <span className="chips-meta">
-          <span className="chips-count" aria-live="polite">
+    <div className="echips">
+      <div className="echips-head">
+        <label htmlFor={id} className="echips-label">{label}</label>
+        <span className="echips-meta">
+          <span className="echips-count" aria-live="polite">
             {chips.length} / {max}
           </span>
           {chips.length > 0 && (
             <button
               type="button"
-              className="chips-link"
+              className="echips-link"
               disabled={disabled}
               onClick={() => {
                 onChipsChange([]);
@@ -133,7 +133,7 @@ export default function EmailChipsInput({
       </div>
 
       <div
-        className="chips-box"
+        className="echips-box"
         data-error={hasError || invalidCount > 0}
         data-disabled={disabled}
         onClick={(e) => {
@@ -143,12 +143,12 @@ export default function EmailChipsInput({
         {chips.map((email) => {
           const valid = isValidEmail(email);
           return (
-            <span key={email} className="chip" data-invalid={!valid} title={valid ? email : "Not a valid email address"}>
-              <span className="chip-text">{email}</span>
+            <span key={email} className="echip" data-invalid={!valid} title={valid ? email : "Not a valid email address"}>
+              <span className="echip-text">{email}</span>
               {!valid && <span className="sr-only"> (invalid)</span>}
               <button
                 type="button"
-                className="chip-x"
+                className="echip-x"
                 disabled={disabled}
                 aria-label={`Remove ${email}`}
                 onClick={() => removeChip(email)}
@@ -164,7 +164,7 @@ export default function EmailChipsInput({
         <input
           ref={inputRef}
           id={id}
-          className="chips-input"
+          className="echips-input"
           type="text"
           inputMode="email"
           autoComplete="off"
@@ -181,7 +181,7 @@ export default function EmailChipsInput({
         />
       </div>
 
-      <div className="chips-foot">
+      <div className="echips-foot">
         <span>
           {chips.length === 0
             ? "Type or paste addresses. Separate with comma, space or new line."
@@ -192,7 +192,7 @@ export default function EmailChipsInput({
         {invalidCount > 0 && (
           <button
             type="button"
-            className="chips-link"
+            className="echips-link"
             disabled={disabled}
             onClick={() => onChipsChange(chips.filter(isValidEmail))}
           >
@@ -201,7 +201,7 @@ export default function EmailChipsInput({
         )}
       </div>
 
-      {notice && <p className="chips-notice" role="status">{notice}</p>}
+      {notice && <p className="echips-notice" role="status">{notice}</p>}
     </div>
   );
 }

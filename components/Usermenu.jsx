@@ -59,7 +59,7 @@ export default function UserMenu({
         aria-label="Account menu"
         onClick={() => setOpen((o) => !o)}
       >
-        {initials(user.name, user.email)}
+        {user.photo?<><img src={`${user.photo}`} className="rounded-full w-full h-full" /></>:initials(user.name, user.email)}
       </button>
 
       {open && (

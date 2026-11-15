@@ -16,6 +16,22 @@ const STATUS = {
 const LIMITS = [10, 20, 50, 100]; // rows-per-page choices (the API caps at 100)
 const DEFAULT_LIMIT = 20;
 
+const MAX_REASON = 500; // keep in sync with the API
+const MAX_CUSTOM_REASON = 100; // same as the Add recipients form
+
+// Keep in sync with REASONS in BlocklistView
+const REASONS = [
+  { value: "Mailbox Full", label: "Mailbox Full" },
+  { value: "Recipient Rejected", label: "Recipient Rejected" },
+  { value: "Invalid Mailbox", label: "Invalid Mailbox" },
+  { value: "Inactive Mailbox", label: "Inactive Mailbox" },
+  { value: "Admin Blocked", label: "Admin Blocked" },
+  { value: "other", label: "Other" },
+];
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const escapeHtml = (v) =>
+  String(v ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
 const isAdminRole = (role) => role === "ADMIN" || role === "SUPERADMIN";
 
 // Admin can approve while the entry is blocked or waiting for review.
@@ -191,25 +207,138 @@ export default function BlockTable({ compact = false, currentUser }) {
     }
   }
 
-  async function editStatus(b) {
-    const options = Object.fromEntries(
-      Object.entries(STATUS)
-        .filter(([key]) => key !== b.status)
-        .map(([key, value]) => [key, value.label])
-    );
+  // Admin edits the email, reason and status of an entry in one dialog
+  async function editEntry(b) {
+    if (busyId) return;
 
-    const { isConfirmed, value } = await Swal.fire({
-      title: "Edit status",
-      text: b.email,
-      input: "select",
-      inputOptions: options,
-      inputPlaceholder: "Select a new status",
+    const field = (id, label, value, attrs = "") => `
+      <label for="${id}" style="display:block;font-size:13px;text-align:left;margin-top:12px">${label}</label>
+      <input id="${id}" class="swal2-input" value="${escapeHtml(value)}" style="margin:4px 0 0;width:100%;box-sizing:border-box" ${attrs}>`;
+    // A saved reason that isn't one of the presets is shown as "Other" with its text filled in
+    const isPreset = REASONS.some((r) => r.value !== "other" && r.value === b.reason);
+    const initialReason = isPreset ? b.reason : "other";
+    const initialDetail = isPreset || b.reason === "Other" ? "" : (b.reason ?? "");
+    const reasonOptions = REASONS.map(
+      (r) => `<option value="${escapeHtml(r.value)}"${r.value === initialReason ? " selected" : ""}>${escapeHtml(r.label)}</option>`
+    ).join("");
+
+    const { isConfirmed, value: changes } = await Swal.fire({
+      title: "Edit blocked recipient",
+      width: 460,
+      html: `
+        ${field("eb-email", "Email", b.email, 'type="email" autocomplete="off"')}
+        <label for="eb-reason" style="display:block;font-size:13px;text-align:left;margin-top:12px">Reason</label>
+        <select id="eb-reason" class="swal2-select" style="margin:4px 0 0;width:100%;box-sizing:border-box">${reasonOptions}</select>
+        <div id="eb-other-wrap" style="${initialReason === "other" ? "" : "display:none"}">
+          ${field("eb-other", "Describe the reason (optional)", initialDetail, `autocomplete="off" maxlength="${MAX_CUSTOM_REASON}"`)}
+        </div>`,
+      didOpen: () => {
+        const select = document.getElementById("eb-reason");
+        const wrap = document.getElementById("eb-other-wrap");
+        select.addEventListener("change", () => {
+          wrap.style.display = select.value === "other" ? "" : "none";
+          if (select.value === "other") document.getElementById("eb-other").focus();
+        });
+      },
+      focusConfirm: false,
       showCancelButton: true,
-      confirmButtonText: "Save",
-      inputValidator: (v) => (v ? undefined : "Please choose a status."),
-    });
+      confirmButtonText: "Save changes",
+      preConfirm: () => {
+        const email = document.getElementById("eb-email").value.trim().toLowerCase();
+        const choice = document.getElementById("eb-reason").value;
+        const detail = document.getElementById("eb-other").value.trim();
+        // "Other" saves the typed text, or the word "Other" when it is left empty
+        const reason = choice === "other" ? detail || "Other" : choice;
+        // const status = document.getElementById("eb-status").value;
+        if (!EMAIL_RE.test(email)) return Swal.showValidationMessage("Enter a valid email address");
+        if (!reason) return Swal.showValidationMessage("Reason is required");
 
-    if (isConfirmed && value) await changeStatus(b, value);
+        // Send only what changed
+        const diff = {};
+        if (email !== b.email) diff.email = email;
+        if (reason !== (b.reason ?? "")) diff.reason = reason;
+        // if (status !== b.status) diff.status = status;
+        if (!Object.keys(diff).length) return Swal.showValidationMessage("No changes to save");
+        return diff;
+      },
+    });
+    if (!isConfirmed || !changes) return;
+
+    setBusyId(b.id);
+    try {
+      let response;
+      try {
+        response = await fetch(`/api/blocklist/${encodeURIComponent(b.id)}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(changes),
+        });
+      } catch {
+        throw new Error("Network error. Check your connection.");
+      }
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        let message = "Couldn't save the changes. Please try again.";
+        if (response.status === 404) message = "This recipient no longer exists.";
+        else if (response.status === 401 || response.status === 403)
+          message = "Your session has expired or you don't have permission.";
+        else if (response.status === 429) message = "Too many requests. Please wait a moment.";
+        else if (response.status < 500 && body?.error) message = body.error; // e.g. duplicate email
+        throw new Error(message);
+      }
+      const result = await response.json().catch(() => null);
+      updateRow(b.id, result?.data ?? changes);
+      // UNBLOCKED entries drop out of this list; any status change moves the sidebar counts
+      if (changes.status) {
+        if (changes.status === "UNBLOCKED") load();
+        window.dispatchEvent(new Event("unblock-requests:changed"));
+      }
+      toast("Recipient updated");
+    } catch (err) {
+      console.error("editEntry failed:", err);
+      toast(err.message || "Couldn't save the changes. Please try again.");
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function removeEntry(b) {
+    if (busyId) return;
+    const { isConfirmed } = await Swal.fire({
+      icon: "warning",
+      title: "Delete this recipient?",
+      text: `${b.email} will be removed from the blocklist, along with any unblock requests for it. This can't be undone.`,
+      showCancelButton: true,
+      confirmButtonText: "Yes, delete",
+      confirmButtonColor: "#dc2626",
+    });
+    if (!isConfirmed) return;
+
+    setBusyId(b.id);
+    try {
+      let response;
+      try {
+        response = await fetch(`/api/blocklist/${encodeURIComponent(b.id)}`, { method: "DELETE" });
+      } catch {
+        throw new Error("Network error. Check your connection.");
+      }
+      if (!response.ok) {
+        let message = "Couldn't delete the recipient. Please try again.";
+        if (response.status === 404) message = "This recipient was already deleted.";
+        else if (response.status === 401 || response.status === 403)
+          message = "Your session has expired or you don't have permission.";
+        throw new Error(message);
+      }
+      setBlocked((prev) => (prev?.data ? { ...prev, data: prev.data.filter((x) => x.id !== b.id) } : prev));
+      window.dispatchEvent(new Event("unblock-requests:changed"));
+      toast("Recipient deleted");
+      await load(); // refresh totals; the page-no-longer-exists check moves back a page if needed
+    } catch (err) {
+      console.error("removeEntry failed:", err);
+      toast(err.message || "Couldn't delete the recipient. Please try again.");
+    } finally {
+      setBusyId(null);
+    }
   }
 
   // Admin rejects a pending unblock request -> back to BLOCKED
@@ -304,11 +433,12 @@ export default function BlockTable({ compact = false, currentUser }) {
                   <td>
                     <div className="flex gap-1 row-actions">
                       {isAdmin ? (
+                        <>
                         <button
                           type="button"
                           disabled={busy}
-                          onClick={() => editStatus(b)}
-                          aria-label={`Edit status for ${b.email}`}
+                          onClick={() => editEntry(b)}
+                          aria-label={`Edit ${b.email}`}
                           className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white shadow-sm transition
                hover:bg-indigo-700 active:scale-[0.98]
                focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2
@@ -317,6 +447,20 @@ export default function BlockTable({ compact = false, currentUser }) {
                           <Icon name="set" />
                           Edit
                         </button>
+                        <button
+                          type="button"
+                          disabled={busy}
+                          onClick={() => removeEntry(b)}
+                          aria-label={`Delete ${b.email}`}
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-red-300 bg-white px-3 py-1.5 text-sm font-medium text-red-700 transition
+               hover:bg-red-50 active:scale-[0.98]
+               focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2
+               disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <Icon name="close" />
+                          Delete
+                        </button>
+                        </>
                       ) : b.status === "UNBLOCK_REQUESTED" ? (
                         <span
                           className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium text-amber-800"

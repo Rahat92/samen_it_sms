@@ -22,7 +22,7 @@ const json = (body, status = 200) => Response.json(body, { status });
 
 function authorised(request) {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false; // never run open if the secret isn't configured
+  if (!secret) return false;
   const given = request.headers.get("authorization") ?? "";
   const a = Buffer.from(given);
   const b = Buffer.from(`Bearer ${secret}`);

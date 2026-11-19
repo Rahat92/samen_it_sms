@@ -16,7 +16,7 @@ const transporter = nodemailer.createTransport({
 
 
 const mailOptions = {
-  from: 'alert@samenits.com',
+  from: 'SAMEN SMTP <alert@samenits.com>',
   to: 'khrahat150@gmail.com',
   subject: 'Hello from Nodemailer',
   text: 'This is a test email',

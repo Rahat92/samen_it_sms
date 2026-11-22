@@ -11,6 +11,7 @@ import { NAV } from "@/lib/nav";
 import { TENANTS } from "@/lib/sample-data";
 import { totals } from "@/lib/stats";
 import UserMenu from "./Usermenu";
+import Sidebar from "./Sidebar";
 
 // YYYY-MM-DD in Asia/Dhaka
 const fmt = (d) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
@@ -265,19 +266,21 @@ export default function Shell({ children, currentUser }) {
 
   return (
     <div className="shell">
-      <aside className="side">
-        <div className="brand">
-          <i><Icon name="tx" /></i>
-          <span>Mail Dashboard</span>
-        </div>
-        <nav style={{ display: "contents" }} aria-label="Sections">
-          {navItems.map((n) => (n.children ? renderGroup(n) : renderLeaf(n)))}
-        </nav>
-        <div className="side-foot">
-          {/* <span>Postal webhooks</span> */}
-          <span className="mono" style={{ color: "var(--side-on)" }}>Asia/Dhaka · UTC+6</span>
-        </div>
-      </aside>
+      <Sidebar>
+        <aside className="side">
+          <div className="brand">
+            <i><Icon name="tx" /></i>
+            <span>Mail Dashboard</span>
+          </div>
+          <nav style={{ display: "contents" }} aria-label="Sections">
+            {navItems.map((n) => (n.children ? renderGroup(n) : renderLeaf(n)))}
+          </nav>
+          <div className="side-foot">
+            {/* <span>Postal webhooks</span> */}
+            <span className="mono" style={{ color: "var(--side-on)" }}>Asia/Dhaka · UTC+6</span>
+          </div>
+        </aside>
+      </Sidebar>
 
       <div className="content">
         <header className="top">

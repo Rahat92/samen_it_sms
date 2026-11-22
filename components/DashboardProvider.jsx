@@ -9,7 +9,18 @@ const fmt = (d) => d.toLocaleDateString("en-CA", { timeZone: "Asia/Dhaka" });
 const Ctx = createContext(null);
 export function DashboardProvider({ children }) {
   const [blocked, setBlocked] = useState([]);
+  const [tenants, setTenants] = useState([])
   const [stats, setStats] = useState([])
+
+  useEffect(() => {
+    const fetchTenants = async () => {
+      const res = await fetch(`/api/users`)
+
+      const users = await res.json()
+      setTenants(users)
+    }
+    fetchTenants()
+  }, [])
   useEffect(() => {
     const fetchBlocked = async () => {
       try {
@@ -49,7 +60,7 @@ export function DashboardProvider({ children }) {
       if (user && user.role == 'USER') {
         const { data } = await axios.get(`/api/stats?tenant=${user.email.split('@')[1]}&timeFrom=${range}&from=${customRange.from}&to=${customRange.to}`)
         setStats(await data)
-      } else if (user.role == 'ADMIN') {
+      } else if (user?.role == 'ADMIN') {
         const { data } = await axios.get(`/api/stats?tenant=${tenant === 'all' ? '' : tenant}&timeFrom=${range}&from=${customRange.from}&to=${customRange.to}`)
         setStats(await data)
       }
@@ -91,7 +102,7 @@ export function DashboardProvider({ children }) {
   );
 
   const value = {
-    rows, setRows, graphRows, setGraphRows, q, setQ, total, setTotal, customRange, setCustomRange, user, setUser, stats, setStats,
+    rows, setRows, tenants, setTenants, graphRows, setGraphRows, q, setQ, total, setTotal, customRange, setCustomRange, user, setUser, stats, setStats,
     range, setRange, tenant, setTenant, scoped,
     blocked, setBlocked, history, setHistory, isBlocked, addBlock, removeBlock,
     selectedId, openEvent: setSelectedId, closeEvent: () => setSelectedId(null),

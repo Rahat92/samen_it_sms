@@ -5,19 +5,23 @@ import { DashboardProvider } from "@/components/DashboardProvider";
 import Shell from "@/components/Shell";
 import "../globals.css";
 import { getCurrentUser } from "@/lib/auth";
+import DashboardLayout from "@/components/DashboardLayout";
+import LayoutView from "@/components/views/LayoutView";
 
 export const metadata = {
   title: { default: "Mail Dashboard", template: "%s · Mail Dashboard" },
   description: "Monitor email delivery from Postal webhooks: summary, failures, transactions and blocked recipients.",
 };
-
 export default async function RootLayout({ children }) {
-  const currentUser = await getCurrentUser();
+  const user = await getCurrentUser()
   return (
     <html lang="en">
       <body>
         <DashboardProvider>
-          <Shell currentUser={currentUser}>{children}</Shell>
+          <DashboardLayout user = {user}>
+            {children}
+          </DashboardLayout>
+
         </DashboardProvider>
       </body>
     </html>

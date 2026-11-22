@@ -1,34 +1,4 @@
 "use client";
-
-/**
- * DashboardLayout — sidebar + sticky top bar + filters + user menu + logout.
- *
- * Usage (app/(dashboard)/layout.jsx) — must be rendered INSIDE <DashboardProvider>:
- *
- *   <DashboardLayout user={currentUser}>
- *     {children}
- *   </DashboardLayout>
- *
- * Props:
- *   user         – { name, email, role, domain, photo? }   (user menu hides if missing)
- *   navItems     – [{ label, sub, href, icon, badge?, children? }]
- *                  A parent item has `children` instead of `href`.
- *   title/subtitle – override the title taken from the active nav item
- *   showFilters  – show Period + Tenant filters in the header (default true)
- *   actions      – custom header node, replaces the default filters
- *   onLogout     – custom logout handler (defaults to POST /api/auth/logout,
- *                  then redirects to /login)
- *
- * Live counts come from GET /api/blocklist/count:
- *   { total, blocked, unblockRequested, unblocked }
- *   - "Blocked recipients" shows `blocked` as a muted badge
- *   - "Unblock requests"   shows `unblockRequested` as a red badge
- *   - the collapsed "Blocklist" parent shows only the red (actionable) count
- *
- * To refresh the counts instantly after an action, dispatch:
- *   window.dispatchEvent(new Event("blocklist:changed"));
- */
-
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 // import { signOut } from "next-auth/react";
@@ -38,23 +8,44 @@ import HeaderFilters from "./HeaderFilters";
 import UserMenu from "./Usermenu";
 import { useDashboard } from "./DashboardProvider";
 
-/* ───────────────────────── Config ───────────────────────── */
+
+const ROLES = { ADMIN: "ADMIN", USER: "USER" };
 
 const DEFAULT_NAV = [
+    // everyone
     { label: "Dashboard", sub: "Email delivery at a glance", href: "/", icon: "dashboard" },
     { label: "Transactions", sub: "Every email, with full detail", href: "/transactions", icon: "mail" },
     { label: "Failures", sub: "Errors and troubleshooting", href: "/failures", icon: "alert" },
     {
+        // everyone (the group is hidden automatically if no child is visible)
         label: "Blocklist",
         sub: "Blocked recipients and unblock requests",
         icon: "ban",
         children: [
             { label: "Blocked recipients", sub: "Recipients you have blocked", href: "/blocklist", icon: "ban" },
-            { label: "Unblock requests", sub: "Review requests to unblock", href: "/unblock-requests", icon: "mail" },
+            // admin only
+            {
+                label: "Unblock requests",
+                sub: "Review requests to unblock",
+                href: "/unblock-requests",
+                icon: "mail",
+                roles: [ROLES.ADMIN],
+            },
         ],
     },
-    { label: "Tenants", sub: "Manage your tenants and their settings", href: "/tenants", icon: "tenants" },
+    // admin only
+    {
+        label: "Tenants",
+        sub: "Manage your tenants and their settings",
+        href: "/tenants",
+        icon: "tenants",
+        roles: [ROLES.ADMIN],
+    },
+    // everyone
     { label: "Report", sub: "Download delivery reports as PDF or CSV", href: "/report", icon: "report" },
+
+    // Example of a user-only item (not shown to admins):
+    // { label: "My requests", sub: "Your unblock requests", href: "/my-requests", icon: "mail", roles: [ROLES.USER] },
 ];
 
 /* ───────────────────────── Icons ───────────────────────── */
@@ -142,6 +133,23 @@ const initials = (name, email) => {
     return ((parts[0]?.[0] || "?") + (parts[1]?.[0] || "")).toUpperCase();
 };
 
+// No `roles` (or an empty list) = visible to everyone.
+const canSee = (item, role) => !item.roles?.length || item.roles.includes(role);
+
+// Apply role rules to the nav tree. A parent is dropped when it has no visible children.
+function filterNavByRole(items, role) {
+    return items.reduce((out, item) => {
+        if (!canSee(item, role)) return out;
+        if (item.children) {
+            const children = item.children.filter((c) => canSee(c, role));
+            if (children.length) out.push({ ...item, children });
+            return out;
+        }
+        out.push(item);
+        return out;
+    }, []);
+}
+
 function Avatar({ user, className = "h-9 w-9 text-xs" }) {
     return (
         <span
@@ -174,7 +182,7 @@ function Badge({ value, tone }) {
             className={
                 "mono rounded-full px-2 py-px text-[11px] font-medium " +
                 (tone === "muted"
-                    ? "bg-[#c2342b] text-white]"
+                    ? "bg-[#c2342b] text-white"
                     : "bg-[var(--bad)] text-white")
             }
         >
@@ -376,10 +384,14 @@ export default function DashboardLayout({
     const counts = useBlocklistCount(pathname);
     const [drawer, setDrawer] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
-    // Inject live counts into the nav items
+
+    // "admin", "Admin" and "ADMIN" all count as ADMIN
+    const role = String(user?.role ?? "").toUpperCase();
+
+    // 1) keep only what this role may see, 2) inject live counts
     const navItems = useMemo(
         () =>
-            navItemsProp.map((item) => {
+            filterNavByRole(navItemsProp, role).map((item) => {
                 if (!item.children) return item;
                 return {
                     ...item,
@@ -394,7 +406,7 @@ export default function DashboardLayout({
                     }),
                 };
             }),
-        [navItemsProp, counts]
+        [navItemsProp, role, counts]
     );
 
     // Flatten children so the header title works on child routes too
@@ -404,7 +416,7 @@ export default function DashboardLayout({
     );
     const current = flatNav.find((n) => isActive(pathname, n.href)) ?? flatNav[0];
 
-    // Kept for custom use; the header user menu below signs out via next-auth
+    // Kept for custom use
     const logout = async () => {
         setLoggingOut(true);
         try {
@@ -499,7 +511,7 @@ export default function DashboardLayout({
                         </div>
 
                         <div className="order-2 sm:order-3">
-                            <UserMenu user={user}  />
+                            <UserMenu user={user} />
                         </div>
 
                         {headerActions && (

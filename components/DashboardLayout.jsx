@@ -376,7 +376,6 @@ export default function DashboardLayout({
     const counts = useBlocklistCount(pathname);
     const [drawer, setDrawer] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
-
     // Inject live counts into the nav items
     const navItems = useMemo(
         () =>
@@ -386,7 +385,7 @@ export default function DashboardLayout({
                     ...item,
                     children: item.children.map((child) => {
                         if (child.href === "/blocklist") {
-                            return { ...child, badge: counts?.blocked || null, badgeTone: "muted" };
+                            return { ...child, badge: counts?.total || null, badgeTone: "muted" };
                         }
                         if (child.href === "/unblock-requests") {
                             return { ...child, badge: counts?.unblockRequested || null };

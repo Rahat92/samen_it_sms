@@ -5,29 +5,38 @@
  *
  * Usage (app/(dashboard)/layout.jsx) — must be rendered INSIDE <DashboardProvider>:
  *
- *   <DashboardLayout user={currentUser} tenants={tenants}>
+ *   <DashboardLayout user={currentUser}>
  *     {children}
  *   </DashboardLayout>
  *
  * Props:
  *   user         – { name, email, role, domain, photo? }   (user menu hides if missing)
- *   tenants      – [{ id, name, domain }]  for the admin Tenant select
- *   navItems     – [{ label, sub, href, icon, badge? }]
+ *   navItems     – [{ label, sub, href, icon, badge?, children? }]
+ *                  A parent item has `children` instead of `href`.
  *   title/subtitle – override the title taken from the active nav item
  *   showFilters  – show Period + Tenant filters in the header (default true)
  *   actions      – custom header node, replaces the default filters
  *   onLogout     – custom logout handler (defaults to POST /api/auth/logout,
  *                  then redirects to /login)
+ *
+ * Live counts come from GET /api/blocklist/count:
+ *   { total, blocked, unblockRequested, unblocked }
+ *   - "Blocked recipients" shows `blocked` as a muted badge
+ *   - "Unblock requests"   shows `unblockRequested` as a red badge
+ *   - the collapsed "Blocklist" parent shows only the red (actionable) count
+ *
+ * To refresh the counts instantly after an action, dispatch:
+ *   window.dispatchEvent(new Event("blocklist:changed"));
  */
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+// import { signOut } from "next-auth/react";
+import { useEffect, useMemo, useState } from "react";
 import Drawer from "./Drawer";
 import HeaderFilters from "./HeaderFilters";
 import UserMenu from "./Usermenu";
 import { useDashboard } from "./DashboardProvider";
-import { report } from "node:process";
 
 /* ───────────────────────── Config ───────────────────────── */
 
@@ -35,7 +44,15 @@ const DEFAULT_NAV = [
     { label: "Dashboard", sub: "Email delivery at a glance", href: "/", icon: "dashboard" },
     { label: "Transactions", sub: "Every email, with full detail", href: "/transactions", icon: "mail" },
     { label: "Failures", sub: "Errors and troubleshooting", href: "/failures", icon: "alert" },
-    { label: "Blocklist", sub: "Recipients you have blocked", href: "/blocklist", icon: "ban" },
+    {
+        label: "Blocklist",
+        sub: "Blocked recipients and unblock requests",
+        icon: "ban",
+        children: [
+            { label: "Blocked recipients", sub: "Recipients you have blocked", href: "/blocklist", icon: "ban" },
+            { label: "Unblock requests", sub: "Review requests to unblock", href: "/unblock-requests", icon: "mail" },
+        ],
+    },
     { label: "Tenants", sub: "Manage your tenants and their settings", href: "/tenants", icon: "tenants" },
     { label: "Report", sub: "Download delivery reports as PDF or CSV", href: "/report", icon: "report" },
 ];
@@ -70,7 +87,11 @@ const ICONS = {
         </>
     ),
     tenants: (
-        <><circle cx="9" cy="8" r="3.2" /><path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1" /><path d="M16 4.8a3.2 3.2 0 0 1 0 6.4M18 14.3a5 5 0 0 1 3 4.7v1" /></>
+        <>
+            <circle cx="9" cy="8" r="3.2" />
+            <path d="M3 20v-1a5 5 0 0 1 5-5h2a5 5 0 0 1 5 5v1" />
+            <path d="M16 4.8a3.2 3.2 0 0 1 0 6.4M18 14.3a5 5 0 0 1 3 4.7v1" />
+        </>
     ),
     settings: (
         <>
@@ -84,8 +105,12 @@ const ICONS = {
             <path d="m16 8 4 4-4 4M20 12H9" />
         </>
     ),
-    report:(
-        <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" /><path d="M14 3v5h5" /><path d="M9 17v-2M12 17v-5M15 17v-3" /></>
+    report: (
+        <>
+            <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8l-5-5z" />
+            <path d="M14 3v5h5" />
+            <path d="M9 17v-2M12 17v-5M15 17v-3" />
+        </>
     ),
     menu: <path d="M4 7h16M4 12h16M4 17h16" />,
     close: <path d="M6 6l12 12M18 6 6 18" />,
@@ -142,9 +167,66 @@ function Brand() {
     );
 }
 
+function Badge({ value, tone }) {
+    if (!value) return null;
+    return (
+        <span
+            className={
+                "mono rounded-full px-2 py-px text-[11px] font-medium " +
+                (tone === "muted"
+                    ? "bg-[#c2342b] text-white]"
+                    : "bg-[var(--bad)] text-white")
+            }
+        >
+            {value}
+        </span>
+    );
+}
+
+/* ───────────────────── Blocklist count hook ───────────────────── */
+
+function useBlocklistCount(pathname) {
+    const [counts, setCounts] = useState(null);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const load = async () => {
+            try {
+                const res = await fetch("/api/blocklist/count", { cache: "no-store" });
+                if (!res.ok) return;
+                const data = await res.json();
+                if (!cancelled) setCounts(data);
+            } catch {
+                /* keep the last known counts on network errors */
+            }
+        };
+
+        load();
+        const id = setInterval(load, 60_000);
+        window.addEventListener("blocklist:changed", load);
+
+        return () => {
+            cancelled = true;
+            clearInterval(id);
+            window.removeEventListener("blocklist:changed", load);
+        };
+    }, [pathname]);
+
+    return counts;
+}
+
 /* ───────────────────────── Sidebar content ───────────────────────── */
 
-function SidebarContent({ navItems, pathname, user, onLogout, loggingOut, onClose  }) {
+function SidebarContent({ navItems, pathname, user, onClose }) {
+    const [openGroups, setOpenGroups] = useState({});
+
+    const isGroupActive = (item) => item.children?.some((c) => isActive(pathname, c.href));
+    // An explicit toggle wins; otherwise open exactly when a child is active
+    const isGroupOpen = (item) => openGroups[item.label] ?? isGroupActive(item);
+    const toggleGroup = (label, current) =>
+        setOpenGroups((s) => ({ ...s, [label]: !current }));
+
     return (
         <div className="flex h-full flex-col bg-[var(--side-bg)] text-[var(--side-fg)]">
             {/* Brand */}
@@ -164,11 +246,74 @@ function SidebarContent({ navItems, pathname, user, onLogout, loggingOut, onClos
 
             {/* Navigation */}
             <nav aria-label="Sections" className="flex-1 overflow-y-auto px-3 py-2">
-                <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--side-fg)]/60">
-                    Menu
-                </p>
                 <ul className="flex flex-col gap-1">
                     {navItems.map((item) => {
+                        /* ───── Parent with children ───── */
+                        if (item.children?.length) {
+                            const groupActive = isGroupActive(item);
+                            const open = isGroupOpen(item);
+                            // Only actionable (non-muted) badges roll up to the parent
+                            const childBadge = item.children.reduce(
+                                (n, c) => (c.badgeTone === "muted" ? n : n + (Number(c.badge) || 0)),
+                                0
+                            );
+
+                            return (
+                                <li key={item.label}>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleGroup(item.label, open)}
+                                        aria-expanded={open}
+                                        aria-controls={`group-${item.label}`}
+                                        className={
+                                            "relative flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors " +
+                                            (groupActive && !open
+                                                ? "bg-[var(--side-on-bg)] text-[var(--side-on)] before:absolute before:bottom-2 before:left-0 before:top-2 before:w-[3px] before:rounded-full before:bg-[var(--accent)]"
+                                                : groupActive
+                                                    ? "text-[var(--side-on)]"
+                                                    : "hover:bg-white/5 hover:text-[var(--side-on)]")
+                                        }
+                                    >
+                                        <Icon name={item.icon} />
+                                        <span className="flex-1 truncate text-left">{item.label}</span>
+                                        {!open && <Badge value={childBadge} />}
+                                        <span className={"transition-transform " + (open ? "rotate-180" : "")}>
+                                            <Icon name="chevron" />
+                                        </span>
+                                    </button>
+
+                                    {open && (
+                                        <ul
+                                            id={`group-${item.label}`}
+                                            className="ml-[22px] mt-1 flex flex-col gap-1 border-l border-white/10 pl-3"
+                                        >
+                                            {item.children.map((child) => {
+                                                const active = isActive(pathname, child.href);
+                                                return (
+                                                    <li key={child.href}>
+                                                        <Link
+                                                            href={child.href}
+                                                            aria-current={active ? "page" : undefined}
+                                                            className={
+                                                                "relative flex items-center gap-3 rounded-lg px-3 py-2 text-[13px] font-medium transition-colors " +
+                                                                (active
+                                                                    ? "bg-[var(--side-on-bg)] text-[var(--side-on)] before:absolute before:bottom-2 before:-left-[13px] before:top-2 before:w-[3px] before:rounded-full before:bg-[var(--accent)]"
+                                                                    : "hover:bg-white/5 hover:text-[var(--side-on)]")
+                                                            }
+                                                        >
+                                                            <span className="flex-1 truncate">{child.label}</span>
+                                                            <Badge value={child.badge} tone={child.badgeTone} />
+                                                        </Link>
+                                                    </li>
+                                                );
+                                            })}
+                                        </ul>
+                                    )}
+                                </li>
+                            );
+                        }
+
+                        /* ───── Regular item ───── */
                         const active = isActive(pathname, item.href);
                         return (
                             <li key={item.href}>
@@ -184,11 +329,7 @@ function SidebarContent({ navItems, pathname, user, onLogout, loggingOut, onClos
                                 >
                                     <Icon name={item.icon} />
                                     <span className="flex-1 truncate">{item.label}</span>
-                                    {item.badge ? (
-                                        <span className="mono rounded-full bg-[var(--bad)] px-2 py-px text-[11px] font-medium text-white">
-                                            {item.badge}
-                                        </span>
-                                    ) : null}
+                                    <Badge value={item.badge} />
                                 </Link>
                             </li>
                         );
@@ -196,7 +337,7 @@ function SidebarContent({ navItems, pathname, user, onLogout, loggingOut, onClos
                 </ul>
             </nav>
 
-            {/* Account + logout */}
+            {/* Account */}
             <div className="flex-none border-t border-white/10 p-3">
                 {user && (
                     <div className="mb-2 flex items-center gap-3 rounded-lg px-2 py-2">
@@ -209,15 +350,6 @@ function SidebarContent({ navItems, pathname, user, onLogout, loggingOut, onClos
                         </div>
                     </div>
                 )}
-                <button
-                    type="button"
-                    onClick={onLogout}
-                    disabled={loggingOut}
-                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-white/5 hover:text-[var(--side-on)] disabled:cursor-wait disabled:opacity-60"
-                >
-                    <Icon name="logout" />
-                    {loggingOut ? "Logging out…" : "Log out"}
-                </button>
                 <p className="mono px-3 pt-2 text-[11px] text-[var(--side-fg)]/70">
                     Asia/Dhaka · UTC+6
                 </p>
@@ -226,96 +358,54 @@ function SidebarContent({ navItems, pathname, user, onLogout, loggingOut, onClos
     );
 }
 
-/* ───────────────────────── Header user menu ───────────────────────── */
-
-// function UserMenu({ user, onLogout, loggingOut }) {
-//   const [open, setOpen] = useState(false);
-//   const ref = useRef(null);
-
-//   useEffect(() => {
-//     if (!open) return;
-//     const onDown = (e) => ref.current && !ref.current.contains(e.target) && setOpen(false);
-//     const onKey = (e) => e.key === "Escape" && setOpen(false);
-//     document.addEventListener("mousedown", onDown);
-//     document.addEventListener("keydown", onKey);
-//     return () => {
-//       document.removeEventListener("mousedown", onDown);
-//       document.removeEventListener("keydown", onKey);
-//     };
-//   }, [open]);
-
-//   if (!user) return null;
-
-//   return (
-//     <div className="relative" ref={ref}>
-//       <button
-//         type="button"
-//         aria-haspopup="menu"
-//         aria-expanded={open}
-//         onClick={() => setOpen((o) => !o)}
-//         className="flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--surface)] py-1 pl-1 pr-1 shadow-[var(--shadow)] transition-colors hover:border-[var(--muted)] sm:pr-3"
-//       >
-//         <Avatar user={user} className="h-8 w-8 text-xs" />
-//         <span className="hidden max-w-[140px] truncate text-sm font-semibold sm:block">
-//           {user.name || "Account"}
-//         </span>
-//         <Icon
-//           name="chevron"
-//           className={`hidden h-4 w-4 text-[var(--muted)] transition-transform sm:block ${open ? "rotate-180" : ""}`}
-//         />
-//       </button>
-
-//       {open && (
-//         <div
-//           role="menu"
-//           className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-lg shadow-black/15"
-//         >
-//           <div className="mb-1.5 flex flex-col gap-0.5 border-b border-[var(--line)] px-3 pb-3 pt-2">
-//             <strong className="truncate text-sm font-semibold">{user.name || "Account"}</strong>
-//             <span className="break-all text-xs text-[var(--muted)]">{user.email}</span>
-//             {user.role && (
-//               <span className="mt-1.5 w-fit rounded-full bg-[var(--accent-soft)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--accent)]">
-//                 {user.role}
-//               </span>
-//             )}
-//           </div>
-//           <button
-//             type="button"
-//             role="menuitem"
-//             onClick={onLogout}
-//             disabled={loggingOut}
-//             className="flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-[var(--bad)] transition-colors hover:bg-[var(--bad-soft)] disabled:cursor-wait disabled:opacity-60"
-//           >
-//             <Icon name="logout" />
-//             {loggingOut ? "Logging out…" : "Log out"}
-//           </button>
-//         </div>
-//       )}
-//     </div>
-//   );
-// }
-
 /* ───────────────────────── Layout ───────────────────────── */
 
 export default function DashboardLayout({
     user,
-    navItems = DEFAULT_NAV,
+    navItems: navItemsProp = DEFAULT_NAV,
     title,
     subtitle,
     showFilters = true,
     actions,
     onLogout,
     children,
-    currentUser
 }) {
-    const{tenants} = useDashboard()
+    const { tenants } = useDashboard();
     const pathname = usePathname();
     const router = useRouter();
+    const counts = useBlocklistCount(pathname);
     const [drawer, setDrawer] = useState(false);
     const [loggingOut, setLoggingOut] = useState(false);
 
-    const current = navItems.find((n) => isActive(pathname, n.href)) ?? navItems[0];
+    // Inject live counts into the nav items
+    const navItems = useMemo(
+        () =>
+            navItemsProp.map((item) => {
+                if (!item.children) return item;
+                return {
+                    ...item,
+                    children: item.children.map((child) => {
+                        if (child.href === "/blocklist") {
+                            return { ...child, badge: counts?.blocked || null, badgeTone: "muted" };
+                        }
+                        if (child.href === "/unblock-requests") {
+                            return { ...child, badge: counts?.unblockRequested || null };
+                        }
+                        return child;
+                    }),
+                };
+            }),
+        [navItemsProp, counts]
+    );
 
+    // Flatten children so the header title works on child routes too
+    const flatNav = useMemo(
+        () => navItems.flatMap((n) => (n.children ? n.children : [n])),
+        [navItems]
+    );
+    const current = flatNav.find((n) => isActive(pathname, n.href)) ?? flatNav[0];
+
+    // Kept for custom use; the header user menu below signs out via next-auth
     const logout = async () => {
         setLoggingOut(true);
         try {
@@ -328,6 +418,7 @@ export default function DashboardLayout({
             setLoggingOut(false);
         }
     };
+
     // Close the mobile drawer after navigating
     useEffect(() => {
         setDrawer(false);
@@ -350,7 +441,7 @@ export default function DashboardLayout({
         };
     }, [drawer]);
 
-    const sidebarProps = { navItems, pathname, user, onLogout: logout, loggingOut };
+    const sidebarProps = { navItems, pathname, user };
 
     const headerActions =
         actions ?? (showFilters ? <HeaderFilters currentUser={user} tenants={tenants} /> : null);
@@ -386,8 +477,8 @@ export default function DashboardLayout({
 
             {/* Main column */}
             <div className="lg:pl-64">
-                <header className="sticky top-0 z-20 border-b border-[var(--line)] bg-[var(--bg)]/85 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
-                    <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-x-3 gap-y-3 px-4 py-3 sm:px-6 lg:px-8">
+                <header className="sticky top-0 z-20 pt-[env(safe-area-inset-top,0px)] backdrop-blur">
+                    <div className="container mx-auto flex flex-wrap items-center gap-x-3 gap-y-3 px-4 py-3 sm:px-6 lg:px-3">
                         <button
                             type="button"
                             onClick={() => setDrawer(true)}
@@ -409,7 +500,7 @@ export default function DashboardLayout({
                         </div>
 
                         <div className="order-2 sm:order-3">
-                            <UserMenu user={user} onLogout={() => signOut({ callbackUrl: "/login" })} />
+                            <UserMenu user={user}  />
                         </div>
 
                         {headerActions && (
@@ -418,7 +509,7 @@ export default function DashboardLayout({
                     </div>
                 </header>
 
-                <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:px-8">
+                <main className="container mx-auto flex w-full flex-col gap-6 px-4 py-6 sm:px-6 lg:px-3">
                     {children}
                 </main>
             </div>

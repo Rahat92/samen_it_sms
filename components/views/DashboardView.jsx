@@ -11,7 +11,7 @@ import { totals } from "@/lib/stats";
 import { useEffect, useState } from "react";
 import axios from "axios";
 
-export default function DashboardView({ result, sent, currentUser }) {
+export default function DashboardView({ sent, currentUser }) {
   const { scoped, range, blocked, tenant, setTenant, graphRows, setGraphRows, customRange } = useDashboard();
   console.log(customRange)
   const [stats, setStats] = useState({})

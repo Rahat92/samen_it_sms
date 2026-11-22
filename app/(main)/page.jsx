@@ -12,17 +12,5 @@ export const metadata = { title: { absolute: "Dashboard · Mail Dashboard" } };
 
 export default async function Page() {
   const currentUser = await getCurrentUser()
-  const [stats, daily, filters, result ] = await Promise.all([
-    getStats(''),
-    getDaily(),
-    getFilterOptions(),
-    getEvents({
-      q: "",
-      status: "",
-      event: "",
-      page: 1,
-      pageSize: 10,
-    }),
-  ]);
-  return <DashboardView currentUser = {currentUser} result={result} />;
+  return <DashboardView currentUser = {currentUser} />;
 }

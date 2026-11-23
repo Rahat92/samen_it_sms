@@ -86,7 +86,18 @@ export default function HeaderFilters({ currentUser, tenants = [] }) {
           <option key={p.value} value={p.value}>{p.label}</option>
         ))}
       </select>
-
+      {mode === "custom" && (
+        <div className="">
+          <DateRangePicker
+            open={calOpen}
+            onOpenChange={setCalOpen}
+            value={pickerValue}
+            minDate={minDate}
+            maxDate={today}
+            onApply={onApply}
+          />
+        </div>
+      )}
       {/* Tenant */}
       <label htmlFor="tenant" className="sr-only">Tenant</label>
       <select
@@ -111,18 +122,7 @@ export default function HeaderFilters({ currentUser, tenants = [] }) {
       </select>
 
       {/* Custom range: full-width row on mobile */}
-      {mode === "custom" && (
-        <div className="col-span-2 sm:col-auto">
-          <DateRangePicker
-            open={calOpen}
-            onOpenChange={setCalOpen}
-            value={pickerValue}
-            minDate={minDate}
-            maxDate={today}
-            onApply={onApply}
-          />
-        </div>
-      )}
+
     </div>
   );
 }

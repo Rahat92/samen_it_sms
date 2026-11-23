@@ -53,7 +53,7 @@ export default function HeaderFilters({ currentUser, tenants = [] }) {
       : { from: addDays(today, -7), to: today };
   const [mode, setMode] = useState(() => {
     const s = String(range ?? "24");
-    return PERIODS.some((p) => p.value === s) ? s : "24";
+    return PERIODS.some((p) => p.value === s) ? s : "today";
   });
   const [calOpen, setCalOpen] = useState(false);
 

@@ -4,9 +4,12 @@ import { NextResponse } from "next/server";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MAX_EMAILS = 100; // keep in sync with the form
+const MAX_SEARCH_LENGTH = 100; // keep in sync with the form
 
 const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 100;
+
+const ADMIN_ROLES = ["ADMIN", "SUPERADMIN"];
 
 // Positive integer from a query param, or the fallback
 const toInt = (value, fallback) => {
@@ -14,7 +17,7 @@ const toInt = (value, fallback) => {
     return Number.isInteger(n) && n > 0 ? n : fallback;
 };
 
-// GET /api/blocklist?page=1&limit=20
+// GET /api/blocklist?page=1&limit=20&q=search+text
 export async function GET(request) {
     const session = await getSession();
     if (!session) {
@@ -25,11 +28,20 @@ export async function GET(request) {
         const { searchParams } = new URL(request.url);
         const page = toInt(searchParams.get("page"), 1);
         const limit = Math.min(toInt(searchParams.get("limit"), DEFAULT_LIMIT), MAX_LIMIT);
+        const q = (searchParams.get("q") ?? "").trim().slice(0, MAX_SEARCH_LENGTH);
 
-        const isAdmin = ["ADMIN", "SUPERADMIN"].includes(session.role);
+        const isAdmin = ADMIN_ROLES.includes(session.role);
         const where = {
             status: { not: "UNBLOCKED" },
             ...(!isAdmin && { domain: session.domain }),
+            // case-insensitive "contains" on email, reason or domain (Prisma escapes % and _ for us)
+            ...(q && {
+                OR: [
+                    { email: { contains: q, mode: "insensitive" } },
+                    { reason: { contains: q, mode: "insensitive" } },
+                    { domain: { contains: q, mode: "insensitive" } },
+                ],
+            }),
         };
 
         const [entries, total] = await prisma.$transaction([
@@ -85,6 +97,15 @@ export async function GET(request) {
 
 // Accepts { emails: string[], reason, domain }. A single { email } still works.
 export async function POST(request) {
+    // The form is hidden for non-admins, but the API must enforce it too.
+    const session = await getSession();
+    if (!session) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    if (!ADMIN_ROLES.includes(session.role)) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     try {
         let body;
         try {

@@ -37,13 +37,19 @@ const isAdminRole = (role) => role === "ADMIN" || role === "SUPERADMIN";
 // Admin can approve while the entry is blocked or waiting for review.
 const canAccept = (status) => status === "BLOCKED" || status === "UNBLOCK_REQUESTED";
 
-export default function BlockTable({ compact = false, currentUser }) {
+/**
+ * Props:
+ *   compact       – small widget, uses the shared state and ignores search/pagination
+ *   currentUser   – { role, ... }
+ *   search        – text to search for (email, reason or domain). Changing it goes back to page 1.
+ *   onResult      – optional callback: ({ total, loading }) so a parent can show the match count
+ */
+export default function BlockTable({ compact = false, currentUser, search = "", onResult }) {
   const { blocked, toast, setBlocked } = useDashboard();
   const [busyId, setBusyId] = useState(null);
   const isAdmin = isAdminRole(currentUser?.role);
 
   // Server-side pagination (full table only; the compact widget keeps using the shared state)
-  const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(DEFAULT_LIMIT);
   const [data, setData] = useState([]);
   const [pagination, setPagination] = useState(null);
@@ -51,12 +57,27 @@ export default function BlockTable({ compact = false, currentUser }) {
   const [error, setError] = useState(null);
   const reqId = useRef(0);
 
+  // The page is remembered together with the search it belongs to, so a new search is
+  // automatically on page 1 without an extra fetch for the old page number.
+  const [pageState, setPageState] = useState({ page: 1, search });
+  const page = pageState.search === search ? pageState.page : 1;
+  const setPage = useCallback(
+    (next) =>
+      setPageState((prev) => {
+        const current = prev.search === search ? prev.page : 1;
+        return { search, page: typeof next === "function" ? next(current) : next };
+      }),
+    [search]
+  );
+
   const load = useCallback(async () => {
     const id = ++reqId.current; // ignore out-of-order responses
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`/api/blocklist?page=${page}&limit=${limit}`, { cache: "no-store" });
+      const params = new URLSearchParams({ page: String(page), limit: String(limit) });
+      if (search) params.set("q", search);
+      const res = await fetch(`/api/blocklist?${params}`, { cache: "no-store" });
       if (!res.ok) {
         throw new Error(
           res.status === 401 || res.status === 403
@@ -81,7 +102,7 @@ export default function BlockTable({ compact = false, currentUser }) {
     } finally {
       if (id === reqId.current) setLoading(false);
     }
-  }, [page, limit]);
+  }, [page, limit, search, setPage]);
 
   useEffect(() => {
     if (!compact) load();
@@ -94,6 +115,12 @@ export default function BlockTable({ compact = false, currentUser }) {
     window.addEventListener("blocklist:changed", load);
     return () => window.removeEventListener("blocklist:changed", load);
   }, [compact, load]);
+
+  // Let the parent show "N matches for …"
+  useEffect(() => {
+    if (compact) return;
+    onResult?.({ total: pagination?.total ?? null, loading });
+  }, [compact, pagination, loading, onResult]);
 
   const rows = compact ? (blocked?.data ?? []).slice(0, 3) : data;
   const shown = rows;
@@ -360,7 +387,7 @@ export default function BlockTable({ compact = false, currentUser }) {
   if (!compact && loading && !rows.length) {
     return (
       <div className="empty" role="status" aria-live="polite">
-        Loading blocklist…
+        {search ? "Searching…" : "Loading blocklist…"}
       </div>
     );
   }
@@ -379,7 +406,9 @@ export default function BlockTable({ compact = false, currentUser }) {
   if (!rows.length) {
     return (
       <div className="empty">
-        No blocked recipients yet. Add an address above, or block one from a failed transaction.
+        {!compact && search
+          ? `No blocked recipients match “${search}”. Try a different email, reason or domain.`
+          : "No blocked recipients yet. Add an address above, or block one from a failed transaction."}
       </div>
     );
   }

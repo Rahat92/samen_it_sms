@@ -9,6 +9,8 @@ import { stamp } from "@/lib/format";
 
 const REQUEST_TIMEOUT_MS = 10000;
 const MAX_EMAILS = 100; // per submit; keep in sync with the API route
+const SEARCH_DEBOUNCE_MS = 300;
+const MAX_SEARCH_LENGTH = 100; // keep in sync with the API route
 
 // Add new reasons here; the select and validation both read from this list.
 const REASONS = [
@@ -104,8 +106,57 @@ function SelectField({ id, label, placeholder, value, options, disabled, describ
   );
 }
 
+// Search box with a clear button. Escape clears it.
+function SearchBox({ value, onChange, busy }) {
+  return (
+    <div role="search" className="relative w-full sm:w-72">
+      <svg
+        viewBox="0 0 24 24"
+        aria-hidden="true"
+        className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 fill-none stroke-[var(--muted)]"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <circle cx="11" cy="11" r="7" />
+        <path d="m20 20-3.5-3.5" />
+      </svg>
+      <label htmlFor="blockSearch" className="sr-only">Search blocked recipients</label>
+      <input
+        id="blockSearch"
+        type="search"
+        inputMode="search"
+        autoComplete="off"
+        placeholder="Search email, reason or domain"
+        maxLength={MAX_SEARCH_LENGTH}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={(e) => e.key === "Escape" && onChange("")}
+        className="h-10 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] pl-9 pr-9 text-sm outline-none transition-colors placeholder:text-[var(--muted)] focus:border-[var(--accent)] [&::-webkit-search-cancel-button]:hidden"
+      />
+      {busy ? (
+        <span
+          aria-hidden="true"
+          className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin rounded-full border-2 border-[var(--line)] border-t-[var(--accent)]"
+        />
+      ) : value ? (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          aria-label="Clear search"
+          className="absolute right-2 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-[var(--muted)] hover:bg-black/5 hover:text-[var(--ink)]"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4 fill-none stroke-current" strokeWidth="1.8" strokeLinecap="round">
+            <path d="M6 6l12 12M18 6 6 18" />
+          </svg>
+        </button>
+      ) : null}
+    </div>
+  );
+}
+
 export default function BlocklistView({ currentUser }) {
-  const { blocked, history, isBlocked, toast, setBlocked } = useDashboard();
+  const { history, isBlocked, toast, setBlocked } = useDashboard();
   const [emails, setEmails] = useState([]); // confirmed chips
   const [draft, setDraft] = useState(""); // text still being typed
   const [reason, setReason] = useState("");
@@ -116,10 +167,36 @@ export default function BlocklistView({ currentUser }) {
   const [submitting, setSubmitting] = useState(false);
   const inFlight = useRef(false); // guards against double submits before state updates
 
+  // Search: `query` is what's in the box, `debouncedQuery` is what the table actually searches for
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [tableState, setTableState] = useState({ total: null, loading: true }); // reported by BlockTable
+
   const isAdmin = ["ADMIN", "SUPERADMIN"].includes(currentUser?.role); // super admins manage the blocklist too
   const errorId = error ? "blockEmailError" : undefined;
   const parsed = parseEmails([...emails, draft].join(" "));
   const clearError = () => error && setError("");
+
+  const pendingSearch = query.trim() !== debouncedQuery; // typed but not applied yet
+  const resetSearch = () => {
+    setQuery("");
+    setDebouncedQuery("");
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedQuery(query.trim()), SEARCH_DEBOUNCE_MS);
+    return () => clearTimeout(timer);
+  }, [query]);
+
+  const { total, loading: tableLoading } = tableState;
+  const hint =
+    debouncedQuery && (tableLoading || total === null)
+      ? "Searching…"
+      : total === null
+        ? "Loading…"
+        : debouncedQuery
+          ? `${total} ${total === 1 ? "match" : "matches"} for “${debouncedQuery}”`
+          : `${total} in total`;
 
   async function submit(e) {
     e?.preventDefault();
@@ -198,7 +275,7 @@ export default function BlocklistView({ currentUser }) {
       const created = result?.created ?? fresh.length;
       const skipped = alreadyBlocked + (result?.skipped?.length ?? 0);
 
-      // 3. Show the new rows in the table right away, then reset the form.
+      // 3. Keep the shared state (used by isBlocked) up to date, then reset the form.
       if (Array.isArray(result?.data) && result.data.length) {
         const newIds = new Set(result.data.map((row) => row.id));
         setBlocked((prev) => ({
@@ -211,6 +288,11 @@ export default function BlocklistView({ currentUser }) {
       setReason("");
       setCustomReason("");
       setDomain("");
+
+      // New rows may not match the current search, so go back to the full list.
+      // BlockTable and the sidebar counts both listen for this event and reload.
+      resetSearch();
+      window.dispatchEvent(new Event("blocklist:changed"));
 
       const summary =
         created === 1 && fresh.length === 1
@@ -362,13 +444,14 @@ export default function BlocklistView({ currentUser }) {
 
       <div className="grid-1">
         <section className="card">
-          <header>
+          <header className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <h2>Blocked recipients</h2>
-              <p className="hint">{blocked?.data?.length ?? 0} in total</p>
+              <p className="hint" aria-live="polite">{hint}</p>
             </div>
+            <SearchBox value={query} onChange={setQuery} busy={pendingSearch} />
           </header>
-          <BlockTable currentUser={currentUser} />
+          <BlockTable currentUser={currentUser} search={debouncedQuery} onResult={setTableState} />
         </section>
         <section style={{ display: "none" }} className="card">
           <header>

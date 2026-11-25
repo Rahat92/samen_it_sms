@@ -1,12 +1,15 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { buildPdf } from "@/lib/report";
+import { getEvents } from "@/lib/queries"; // <- keep whatever import your project already uses
+import { buildDailyCsv } from "@/lib/report";
 import { sendDailyReportEmail } from "@/lib/mailer";
-import { getEvents } from "@/lib/queries";
+
 // Called by a scheduler (system cron, see below), never by the browser.
 //   POST /api/cron/daily-report                 -> report for yesterday (Asia/Dhaka)
 //   POST /api/cron/daily-report?date=2026-11-16 -> report for that day (re-send / catch-up)
 //   add &dryRun=1 to see who would get an email without sending anything
+//   add &tenant=acme.com to run for one tenant only, and &to=you@example.com to send to that
+//   address instead of the tenant's users (safe way to test)
 // Auth: header  Authorization: Bearer <CRON_SECRET>   (set CRON_SECRET in .env)
 
 export const runtime = "nodejs";
@@ -22,7 +25,7 @@ const json = (body, status = 200) => Response.json(body, { status });
 
 function authorised(request) {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
+  if (!secret) return false; // never run open if the secret isn't configured
   const given = request.headers.get("authorization") ?? "";
   const a = Buffer.from(given);
   const b = Buffer.from(`Bearer ${secret}`);
@@ -40,6 +43,9 @@ async function run(request) {
   const date = searchParams.get("date") || yesterdayDhaka();
   if (!DATE_RE.test(date)) return json({ error: "date must be YYYY-MM-DD" }, 400);
   const dryRun = searchParams.get("dryRun") === "1";
+  const onlyTenant = (searchParams.get("tenant") || "").trim().toLowerCase();
+  const testTo = (searchParams.get("to") || "").trim();
+  if (testTo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testTo)) return json({ error: "to must be a valid email" }, 400);
 
   // Tenants = active tenant users, grouped by domain; every active user of a domain gets the report
   const users = await prisma.user.findMany({
@@ -54,7 +60,9 @@ async function run(request) {
   }
 
   const results = [];
-  for (const [tenant, recipients] of byDomain) {
+  for (const [tenant, tenantRecipients] of byDomain) {
+    if (onlyTenant && tenant !== onlyTenant) continue;
+    const recipients = testTo ? [testTo] : tenantRecipients; // ?to= redirects everything to the tester
     try {
       const { rows, total } = await getEvents({
         tenant,
@@ -76,13 +84,8 @@ async function run(request) {
         continue;
       }
 
-      const pdf = buildPdf(rows, {
-        title: `Daily mail report: ${tenant}`,
-        filters: [`Tenant: ${tenant}`, `Date: ${date}`],
-        total,
-        truncated: false,
-      });
-      await sendDailyReportEmail({ to: recipients, tenant, dateLabel: date, pdf, stats });
+      const csv = buildDailyCsv(rows);
+      await sendDailyReportEmail({ to: recipients, tenant, dateLabel: date, csv, stats });
       results.push({ tenant, status: "sent", recipients: recipients.length, ...stats });
     } catch (err) {
       // one tenant failing must not stop the others

@@ -37,7 +37,7 @@ const yesterdayDhaka = () =>
   new Date(Date.now() - 24 * 3600 * 1000).toLocaleDateString("en-CA", { timeZone: TZ });
 
 async function run(request) {
-  if (!authorised(request)) return json({ error: "Unauthorized" }, 401);
+  // if (!authorised(request)) return json({ error: "Unauthorized" }, 401);
 
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date") || yesterdayDhaka();

@@ -1,16 +1,9 @@
 import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
-import { getEvents } from "@/lib/queries"; // <- keep whatever import your project already uses
+import { getEvents } from "@/lib/queries"; 
 import { buildDailyCsv } from "@/lib/report";
 import { sendDailyReportEmail } from "@/lib/mailer";
 
-// Called by a scheduler (system cron, see below), never by the browser.
-//   POST /api/cron/daily-report                 -> report for yesterday (Asia/Dhaka)
-//   POST /api/cron/daily-report?date=2026-11-16 -> report for that day (re-send / catch-up)
-//   add &dryRun=1 to see who would get an email without sending anything
-//   add &tenant=acme.com to run for one tenant only, and &to=you@example.com to send to that
-//   address instead of the tenant's users (safe way to test)
-// Auth: header  Authorization: Bearer <CRON_SECRET>   (set CRON_SECRET in .env)
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,26 +11,25 @@ export const maxDuration = 300;
 
 const TZ = "Asia/Dhaka";
 const NO_LIMIT = 2147483647;
-const SKIP_EMPTY_DAYS = true; // don't email a tenant that had no messages that day
+const SKIP_EMPTY_DAYS = true;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 const json = (body, status = 200) => Response.json(body, { status });
 
 function authorised(request) {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return false; // never run open if the secret isn't configured
+  if (!secret) return false;
   const given = request.headers.get("authorization") ?? "";
   const a = Buffer.from(given);
   const b = Buffer.from(`Bearer ${secret}`);
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
-// The calendar day before "now" in Asia/Dhaka
 const yesterdayDhaka = () =>
   new Date(Date.now() - 24 * 3600 * 1000).toLocaleDateString("en-CA", { timeZone: TZ });
 
 async function run(request) {
-  // if (!authorised(request)) return json({ error: "Unauthorized" }, 401);
+  if (!authorised(request)) return json({ error: "Unauthorized" }, 401);
 
   const { searchParams } = new URL(request.url);
   const date = searchParams.get("date") || yesterdayDhaka();
@@ -47,7 +39,6 @@ async function run(request) {
   const testTo = (searchParams.get("to") || "").trim();
   if (testTo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testTo)) return json({ error: "to must be a valid email" }, 400);
 
-  // Tenants = active tenant users, grouped by domain; every active user of a domain gets the report
   const users = await prisma.user.findMany({
     where: { role: "USER", isActive: true, domain: { not: null } },
     select: { email: true, domain: true },
@@ -62,7 +53,7 @@ async function run(request) {
   const results = [];
   for (const [tenant, tenantRecipients] of byDomain) {
     if (onlyTenant && tenant !== onlyTenant) continue;
-    const recipients = testTo ? [testTo] : tenantRecipients; // ?to= redirects everything to the tester
+    const recipients = testTo ? [testTo] : tenantRecipients;
     try {
       const { rows, total } = await getEvents({
         tenant,
@@ -88,7 +79,6 @@ async function run(request) {
       await sendDailyReportEmail({ to: recipients, tenant, dateLabel: date, csv, stats });
       results.push({ tenant, status: "sent", recipients: recipients.length, ...stats });
     } catch (err) {
-      // one tenant failing must not stop the others
       console.error(`daily report failed for ${tenant}:`, err);
       results.push({ tenant, status: "failed", error: err.message });
     }
@@ -99,4 +89,4 @@ async function run(request) {
 }
 
 export const POST = run;
-export const GET = run; // so a plain `curl` works too; still needs the secret
+export const GET = run;
